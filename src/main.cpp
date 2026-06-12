@@ -29,7 +29,7 @@ constexpr int BYTES_PER_FRAME       = sizeof(int32_t) * 2;
 
 constexpr int TRIGGER_THRESHOLD = 100;
 constexpr int SILENCE_THRESHOLD = 20;
-constexpr int SILENCE_COUNT_MAX = 2;
+constexpr int SILENCE_COUNT_MAX = 1;
 
 // FSM state definition
 enum State { IDLE, GATHERING_FUTURE, STREAMING };
@@ -128,7 +128,7 @@ void setup() {
     Serial.println(message.data());
   });
 
-  while (!client.connect(websockets_server_host, websockets_server_port, "/")) {
+  while (!client.connect(websockets_server_host, websockets_server_port, websockets_server_path)) {
     Serial.println("WebSocket 연결 실패. 재시도 중...");
     delay(3000);
   }

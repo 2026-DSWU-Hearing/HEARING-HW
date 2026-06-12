@@ -10,5 +10,6 @@ const char* ssid = "your_ssid";
 const char* password = "your_password";
 const char* websockets_server_host = "your_server_ip";
 const uint16_t websockets_server_port = 8765;
+const char* websockets_server_path = "/ws";
 
 #endif
