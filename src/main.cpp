@@ -118,6 +118,19 @@ long calculate_and_send_audio() {
 
 void setup() {
   Serial.begin(115200);
+  // wifi scan
+  Serial.println("\n주변 와이파이 검색 중...");
+  int n = WiFi.scanNetworks();
+  if (n == 0) {
+    Serial.println("검색된 와이파이가 없습니다.");
+  } 
+  else {
+    Serial.printf("%d개의 와이파이가 검색되었습니다:\n", n);
+    for (int i = 0; i < n; ++i) {
+      Serial.printf("%d: %s (신호강도: %d)\n", i + 1, WiFi.SSID(i).c_str(), WiFi.RSSI(i));
+    }
+  }
+
   i2s_init();
 
   WiFi.begin(ssid, password);
