@@ -13,8 +13,8 @@ WebsocketsClient client;
   #define I2S0_SD  32
   #define I2S1_SD  16
 #elif defined(BOARD_ESP32_S3)
-  #define I2S_SCK  14
-  #define I2S_WS   15
+  #define I2S_SCK  15
+  #define I2S_WS   14
   #define I2S0_SD  17
   #define I2S1_SD  18
 #else
