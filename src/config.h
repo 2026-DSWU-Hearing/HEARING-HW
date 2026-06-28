@@ -19,8 +19,10 @@ constexpr int BLOCK_SIZE             = 256;
 constexpr int SEND_INTERVAL_SAMPLES  = SAMPLE_RATE / 2;
 constexpr int BYTES_PER_FRAME        = sizeof(int32_t) * 2;
 
-constexpr int TRIGGER_THRESHOLD      = 100;
+constexpr int TRIGGER_THRESHOLD      = 30;
 constexpr int SILENCE_THRESHOLD      = 20;
 constexpr int SILENCE_COUNT_MAX      = 1;
 
-constexpr float DIRECTION_DOMINANT_RATIO = 1.1f;
+constexpr int   MAX_TDOA_SAMPLES = 8;
+constexpr float TDOA_THRESHOLD   = 1.5f;
+constexpr int   VOTE_BUF_SIZE    = SAMPLE_RATE / BLOCK_SIZE + 1;

@@ -10,6 +10,10 @@ static int32_t samples_i2s1[BLOCK_SIZE * 2];
 static int16_t ring_buf[SAMPLE_RATE];
 static int     write_idx = 0;
 
+static int16_t block_l[BLOCK_SIZE];
+static int16_t block_r[BLOCK_SIZE];
+static int16_t block_b[BLOCK_SIZE];
+
 void audio_init() {
     i2s_chan_config_t chan_cfg0 = {
         .id            = I2S_NUM_0,
@@ -77,6 +81,10 @@ int audio_read_block(long* energy_l, long* energy_r, long* energy_b) {
         ring_buf[write_idx] = l;
         write_idx = (write_idx + 1) % SAMPLE_RATE;
 
+        block_l[i] = l;
+        block_r[i] = r;
+        block_b[i] = b;
+
         *energy_l += abs(l);
         *energy_r += abs(r);
         *energy_b += abs(b);
@@ -90,4 +98,10 @@ void audio_flatten(int16_t* out_buf) {
         out_buf[i] = ring_buf[idx];
         idx = (idx + 1) % SAMPLE_RATE;
     }
+}
+
+void audio_get_last_block(int16_t* l_out, int16_t* r_out, int16_t* b_out) {
+    memcpy(l_out, block_l, BLOCK_SIZE * sizeof(int16_t));
+    memcpy(r_out, block_r, BLOCK_SIZE * sizeof(int16_t));
+    memcpy(b_out, block_b, BLOCK_SIZE * sizeof(int16_t));
 }

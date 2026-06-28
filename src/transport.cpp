@@ -35,10 +35,10 @@ int16_t* transport_get_pcm_buf() {
     return (int16_t*)(send_buf + 4);
 }
 
-void transport_send(Direction dir, int sample_count) {
+void transport_send(Direction dir, int num_samples) {
     send_buf[0] = static_cast<uint8_t>(dir);
     send_buf[1] = 0;
     send_buf[2] = 0;
     send_buf[3] = 0;
-    ws_client.sendBinary((const char*)send_buf, 4 + sample_count * sizeof(int16_t));
+    ws_client.sendBinary((const char*)send_buf, 4 + num_samples * sizeof(int16_t));
 }

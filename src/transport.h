@@ -6,4 +6,5 @@
 void      transport_init();
 void      transport_poll();
 int16_t*  transport_get_pcm_buf();
-void      transport_send(Direction dir, int sample_count);
+// num_samples: 전송할 샘플 수. 1초치는 SAMPLE_RATE.
+void      transport_send(Direction dir, int num_samples);

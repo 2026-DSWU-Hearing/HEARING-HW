@@ -32,38 +32,38 @@ void loop() {
     static State state          = State::IDLE;
     static int   sample_counter = 0;
     static int   silence_counter = 0;
-    static long  energy_l = 0, energy_r = 0, energy_b = 0;
+    static long  energy_l = 0;
 
     long block_el = 0, block_er = 0, block_eb = 0;
     int  frames = audio_read_block(&block_el, &block_er, &block_eb);
 
     if (state == State::IDLE) {
-        // TODO: 시리얼 플로터용 임시 코드 - 확인 후 삭제
-        if (frames > 0)
-            Serial.printf(">L:%ld|R:%ld|B:%ld\n",
-                          block_el/frames, block_er/frames, block_eb/frames);
         long block_max = max(block_el, max(block_er, block_eb));
         if (frames > 0 && block_max / frames > TRIGGER_THRESHOLD) {
             state          = State::GATHERING;
             sample_counter = frames;
-            energy_l = block_el;
-            energy_r = block_er;
-            energy_b = block_eb;
+            energy_l       = block_el;
+            direction_reset();
+            int16_t bl[BLOCK_SIZE], br[BLOCK_SIZE], bb[BLOCK_SIZE];
+            audio_get_last_block(bl, br, bb);
+            direction_update(bl, br, bb);
         }
         return;
     }
 
+    {
+        int16_t bl[BLOCK_SIZE], br[BLOCK_SIZE], bb[BLOCK_SIZE];
+        audio_get_last_block(bl, br, bb);
+        direction_update(bl, br, bb);
+    }
+
     energy_l += block_el;
-    energy_r += block_er;
-    energy_b += block_eb;
     sample_counter += frames;
 
     if (sample_counter < SEND_INTERVAL_SAMPLES) return;
 
-    // 0.5초 블록 완성 → 방향 계산 후 전송
-    Direction dir = calculate_direction(energy_l, energy_r, energy_b);
-    Serial.printf("방향: %s  (L:%ld R:%ld B:%ld)\n",
-                  direction_to_str(dir), energy_l, energy_r, energy_b);
+    Direction dir = direction_get();
+    Serial.printf("방향: %s\n", direction_to_str(dir));
 
     audio_flatten(transport_get_pcm_buf());
     transport_send(dir, SAMPLE_RATE);
@@ -74,7 +74,7 @@ void loop() {
     if (state == State::GATHERING) state = State::STREAMING;
 
     sample_counter = 0;
-    energy_l = energy_r = energy_b = 0;
+    energy_l       = 0;
 
     if (avg_volume < SILENCE_THRESHOLD) {
         if (++silence_counter >= SILENCE_COUNT_MAX) {

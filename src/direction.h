@@ -9,5 +9,7 @@ enum class Direction : uint8_t {
     UNKNOWN = 4
 };
 
-Direction   calculate_direction(long energy_l, long energy_r, long energy_b);
+void        direction_reset();
+void        direction_update(const int16_t* l, const int16_t* r, const int16_t* b);
+Direction   direction_get();
 const char* direction_to_str(Direction d);

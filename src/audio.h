@@ -10,3 +10,6 @@ int  audio_read_block(long* energy_l, long* energy_r, long* energy_b);
 
 // ring buffer → out_buf (SAMPLE_RATE개 int16) 평탄화
 void audio_flatten(int16_t* out_buf);
+
+// 가장 최근 블록의 L/R/B 샘플 복사 (GCC-PHAT용)
+void audio_get_last_block(int16_t* l_out, int16_t* r_out, int16_t* b_out);
