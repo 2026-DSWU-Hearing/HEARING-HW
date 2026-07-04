@@ -1,4 +1,4 @@
-#include "transport.h"
+#include "websocket.h"
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ArduinoWebsockets.h>
@@ -11,7 +11,7 @@ static WebsocketsClient ws_client;
 // [1바이트 방향][3바이트 패딩][PCM int16 데이터]
 static uint8_t send_buf[4 + SAMPLE_RATE * sizeof(int16_t)];
 
-void transport_init() {
+void websocket_init() {
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
     Serial.println("\nWiFi Connected!");
@@ -27,15 +27,15 @@ void transport_init() {
     Serial.println("WebSocket Connected!");
 }
 
-void transport_poll() {
+void websocket_poll() {
     if (ws_client.available()) ws_client.poll();
 }
 
-int16_t* transport_get_pcm_buf() {
+int16_t* websocket_get_pcm_buf() {
     return (int16_t*)(send_buf + 4);
 }
 
-void transport_send(Direction dir, int num_samples) {
+void websocket_send(Direction dir, int num_samples) {
     send_buf[0] = static_cast<uint8_t>(dir);
     send_buf[1] = 0;
     send_buf[2] = 0;

@@ -3,7 +3,7 @@
 #include "config.h"
 #include "audio.h"
 #include "direction.h"
-#include "transport.h"
+#include "websocket.h"
 
 enum class State { IDLE, GATHERING, STREAMING };
 
@@ -23,11 +23,11 @@ void setup() {
     }
 
     audio_init();
-    transport_init();
+    websocket_init();
 }
 
 void loop() {
-    transport_poll();
+    websocket_poll();
 
     static State state          = State::IDLE;
     static int   sample_counter = 0;
@@ -65,8 +65,8 @@ void loop() {
     Direction dir = direction_get();
     Serial.printf("방향: %s\n", direction_to_str(dir));
 
-    audio_flatten(transport_get_pcm_buf());
-    transport_send(dir, SAMPLE_RATE);
+    audio_flatten(websocket_get_pcm_buf());
+    websocket_send(dir, SAMPLE_RATE);
 
     long avg_volume = energy_l / sample_counter;
     Serial.printf("volume: %ld\n", avg_volume);
