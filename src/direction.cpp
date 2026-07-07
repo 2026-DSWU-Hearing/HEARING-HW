@@ -48,27 +48,30 @@ static float cross_corr_peak(const int16_t* a, const int16_t* b) {
 }
 
 void direction_update(const int16_t* l, const int16_t* r, const int16_t* b) {
-    long ea = 0;
-    for (int i = 0; i < BLOCK_SIZE; i++) ea += abs(l[i]);
-    if (ea / BLOCK_SIZE < TRIGGER_THRESHOLD) return;
+    long ea_l = 0, ea_r = 0;
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        ea_l += abs(l[i]);
+        ea_r += abs(r[i]);
+    }
+    if (max(ea_l, ea_r) / BLOCK_SIZE < TRIGGER_THRESHOLD) return;
 
     float tdoa_lr = cross_corr_peak(l, r);
+    float tdoa_lb = cross_corr_peak(l, b);
+    float tdoa_rb = cross_corr_peak(r, b);
 
-    int16_t lr[BLOCK_SIZE];
-    for (int i = 0; i < BLOCK_SIZE; i++)
-        lr[i] = (int16_t)(((int)l[i] + (int)r[i]) >> 1);
-    float tdoa_b = cross_corr_peak(lr, b);
-
-    Serial.printf(">tdoa_lr:%.2f|tdoa_b:%.2f\n", tdoa_lr, tdoa_b);
+    Serial.printf("tdoa_lr: %.2f, tdoa_lb: %.2f, tdoa_rb: %.2f\n", tdoa_lr, tdoa_lb, tdoa_rb);
 
     Direction vote;
-    if (tdoa_lr > TDOA_THRESHOLD) {
+    if (tdoa_lb < -TDOA_THRESHOLD && tdoa_rb < -TDOA_THRESHOLD) {
+        vote = Direction::BACK;
+    } else if (tdoa_lr > TDOA_THRESHOLD) {
         vote = Direction::LEFT;
     } else if (tdoa_lr < -TDOA_THRESHOLD) {
         vote = Direction::RIGHT;
+    } else if (tdoa_lb > TDOA_THRESHOLD && tdoa_rb > TDOA_THRESHOLD) {
+        vote = Direction::FRONT;
     } else {
-        if (fabsf(tdoa_b) < 0.5f) return;  // 모호한 경우 투표 건너뜀
-        vote = (tdoa_b > 0) ? Direction::FRONT : Direction::BACK;
+        return;  // 애매한 블록은 투표 건너뜀
     }
 
     vote_buf[vote_idx] = vote;
