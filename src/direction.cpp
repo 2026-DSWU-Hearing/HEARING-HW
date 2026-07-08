@@ -53,25 +53,27 @@ void direction_update(const int16_t* l, const int16_t* r, const int16_t* b) {
         ea_l += abs(l[i]);
         ea_r += abs(r[i]);
     }
-    if (max(ea_l, ea_r) / BLOCK_SIZE < TRIGGER_THRESHOLD) return;
 
-    float tdoa_lr = cross_corr_peak(l, r);
-    float tdoa_lb = cross_corr_peak(l, b);
-    float tdoa_rb = cross_corr_peak(r, b);
+    // skip되는 블록도 슬롯 자체는 항상 흘려보내야 vote_buf가 실제 경과 시간과 맞음
+    Direction vote = Direction::UNKNOWN;
 
-    Serial.printf("tdoa_lr: %.2f, tdoa_lb: %.2f, tdoa_rb: %.2f\n", tdoa_lr, tdoa_lb, tdoa_rb);
+    if (max(ea_l, ea_r) / BLOCK_SIZE >= TRIGGER_THRESHOLD) {
+        float tdoa_lr = cross_corr_peak(l, r);
+        float tdoa_lb = cross_corr_peak(l, b);
+        float tdoa_rb = cross_corr_peak(r, b);
 
-    Direction vote;
-    if (tdoa_lb < -TDOA_THRESHOLD && tdoa_rb < -TDOA_THRESHOLD) {
-        vote = Direction::BACK;
-    } else if (tdoa_lr > TDOA_THRESHOLD) {
-        vote = Direction::LEFT;
-    } else if (tdoa_lr < -TDOA_THRESHOLD) {
-        vote = Direction::RIGHT;
-    } else if (tdoa_lb > TDOA_THRESHOLD && tdoa_rb > TDOA_THRESHOLD) {
-        vote = Direction::FRONT;
-    } else {
-        return;  // 애매한 블록은 투표 건너뜀
+        Serial.printf("tdoa_lr: %.2f, tdoa_lb: %.2f, tdoa_rb: %.2f\n", tdoa_lr, tdoa_lb, tdoa_rb);
+
+        if (tdoa_lb < -TDOA_THRESHOLD && tdoa_rb < -TDOA_THRESHOLD) {
+            vote = Direction::BACK;
+        } else if (tdoa_lr > TDOA_THRESHOLD) {
+            vote = Direction::LEFT;
+        } else if (tdoa_lr < -TDOA_THRESHOLD) {
+            vote = Direction::RIGHT;
+        } else if (tdoa_lb > TDOA_THRESHOLD && tdoa_rb > TDOA_THRESHOLD) {
+            vote = Direction::FRONT;
+        }
+        // 그 외 애매한 경우는 vote == UNKNOWN 유지 (투표는 안 하지만 슬롯은 소모)
     }
 
     vote_buf[vote_idx] = vote;

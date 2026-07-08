@@ -23,6 +23,6 @@ constexpr int TRIGGER_THRESHOLD      = 30;
 constexpr int SILENCE_THRESHOLD      = 20;
 constexpr int SILENCE_COUNT_MAX      = 1;
 
-constexpr int   MAX_TDOA_SAMPLES = 8;
+constexpr int   MAX_TDOA_SAMPLES = 16;
 constexpr float TDOA_THRESHOLD   = 1.5f;
 constexpr int   VOTE_BUF_SIZE    = SAMPLE_RATE / BLOCK_SIZE + 1;
