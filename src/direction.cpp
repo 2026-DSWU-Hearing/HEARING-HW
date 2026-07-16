@@ -47,17 +47,13 @@ static float cross_corr_peak(const int16_t* a, const int16_t* b) {
     return (float)(best_idx - MAX_TDOA_SAMPLES) + offset;
 }
 
-void direction_update(const int16_t* l, const int16_t* r, const int16_t* b) {
-    long ea_l = 0, ea_r = 0;
-    for (int i = 0; i < BLOCK_SIZE; i++) {
-        ea_l += abs(l[i]);
-        ea_r += abs(r[i]);
-    }
-
+void direction_update(const int16_t* l, const int16_t* r, const int16_t* b, long energy_l, long energy_r, long energy_b, int frames) {
     // skip되는 블록도 슬롯 자체는 항상 흘려보내야 vote_buf가 실제 경과 시간과 맞음
     Direction vote = Direction::UNKNOWN;
 
-    if (max(ea_l, ea_r) / BLOCK_SIZE >= TRIGGER_THRESHOLD) {
+    // frames로 나눠야 main.cpp의 트리거 판정과 기준이 일치하고,
+    // 세 마이크 중 뒤쪽(B)만 큰 소리(BACK 방향)도 게이트를 통과할 수 있다.
+    if (frames > 0 && max(energy_l, max(energy_r, energy_b)) / frames >= TRIGGER_THRESHOLD) {
         float tdoa_lr = cross_corr_peak(l, r);
         float tdoa_lb = cross_corr_peak(l, b);
         float tdoa_rb = cross_corr_peak(r, b);

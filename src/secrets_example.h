@@ -6,10 +6,16 @@
 #define SECRETS_H
 #include <stdint.h>
 
-const char* ssid = "your_ssid";
-const char* password = "your_password";
-const char* websockets_server_host = "your_server_ip";
-const uint16_t websockets_server_port = 8765;
-const char* websockets_server_path = "/ws";
+static const char* ssid = "your_ssid";
+static const char* password = "your_password";
+
+// AI서버 /ws 접속용
+static const char* websockets_server_host = "your_server_ip";
+static const uint16_t websockets_server_port = 8765;
+
+// 백엔드 /ws/devices 접속용
+static const char* backend_ws_host = "your_backend_ip";
+static const uint16_t backend_ws_port = 8000;
+static const char* backend_device_token = "your_device_token";
 
 #endif

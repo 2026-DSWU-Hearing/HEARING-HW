@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 
 #if defined(BOARD_ESP32_STD)
   #define I2S_SCK  14
@@ -26,3 +27,6 @@ constexpr int SILENCE_COUNT_MAX      = 1;
 constexpr int   MAX_TDOA_SAMPLES = 16;
 constexpr float TDOA_THRESHOLD   = 1.5f;
 constexpr int   VOTE_BUF_SIZE    = SAMPLE_RATE / BLOCK_SIZE + 1;
+
+// 모터 진동 시 마이크로 유입되는 기계적 진동 노이즈 방지용 무음 구간
+constexpr uint32_t AUDIO_MUTE_AFTER_VIBRATE_MS = 1000;

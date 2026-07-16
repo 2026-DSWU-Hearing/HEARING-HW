@@ -14,6 +14,16 @@ static int16_t block_l[BLOCK_SIZE];
 static int16_t block_r[BLOCK_SIZE];
 static int16_t block_b[BLOCK_SIZE];
 
+static volatile uint32_t mute_until_ms = 0;
+
+void audio_mute(uint32_t ms) {
+    mute_until_ms = millis() + ms;
+}
+
+bool audio_is_muted() {
+    return (int32_t)(mute_until_ms - millis()) > 0;
+}
+
 void audio_init() {
     i2s_chan_config_t chan_cfg0 = {
         .id            = I2S_NUM_0,
@@ -72,14 +82,19 @@ int audio_read_block(long* energy_l, long* energy_r, long* energy_b) {
     i2s_channel_read(rx_handle_0, samples_i2s0, sizeof(samples_i2s0), &r0, portMAX_DELAY);
     i2s_channel_read(rx_handle_1, samples_i2s1, sizeof(samples_i2s1), &r1, portMAX_DELAY);
 
+    bool muted = audio_is_muted();
     int frames = (int)(min(r0, r1) / BYTES_PER_FRAME);
     for (int i = 0; i < frames; i++) {
         int16_t l = (int16_t)(samples_i2s0[i * 2]     >> 16);
         int16_t r = (int16_t)(samples_i2s0[i * 2 + 1] >> 16);
         int16_t b = (int16_t)(samples_i2s1[i * 2]     >> 16);
 
-        ring_buf[write_idx] = l;
-        write_idx = (write_idx + 1) % SAMPLE_RATE;
+        // 무음 구간 동안은 ring buffer 쓰기만 건너뛴다 — 진동 노이즈가 섞인 샘플이 기록되지 않기 위함.
+        // I2S 읽기 자체는 DMA 타이밍 유지를 위해 계속 수행한다.
+        if (!muted) {
+            ring_buf[write_idx] = l;
+            write_idx = (write_idx + 1) % SAMPLE_RATE;
+        }
 
         block_l[i] = l;
         block_r[i] = r;
@@ -89,6 +104,15 @@ int audio_read_block(long* energy_l, long* energy_r, long* energy_b) {
         *energy_r += abs(r);
         *energy_b += abs(b);
     }
+
+    // 읽은 프레임이 BLOCK_SIZE보다 짧으면 나머지를 0으로 채워
+    // 이전 블록의 오래된 샘플이 남아있지 않도록 한다.
+    for (int i = frames; i < BLOCK_SIZE; i++) {
+        block_l[i] = 0;
+        block_r[i] = 0;
+        block_b[i] = 0;
+    }
+
     return frames;
 }
 
