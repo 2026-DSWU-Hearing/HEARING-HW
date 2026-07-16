@@ -32,6 +32,7 @@ void setup() {
 
 void loop() {
     ai_ws_poll();
+    motor_update();
 
     static State state          = State::IDLE;
     static int   sample_counter = 0;
