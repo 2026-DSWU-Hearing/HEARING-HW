@@ -6,11 +6,20 @@
   #define I2S_WS   15
   #define I2S0_SD  32   // mic_l (L ch), mic_r (R ch)
   #define I2S1_SD  16   // mic_b (L ch)
+
+  // 모터 미배선. 값 자체는 미사용.
+  #define MOTOR_PIN_LEFT   4
+  #define MOTOR_PIN_RIGHT  5
+  #define MOTOR_PIN_BACK   6
 #elif defined(BOARD_ESP32_S3)
   #define I2S_SCK  15
   #define I2S_WS   14
   #define I2S0_SD  17
   #define I2S1_SD  18
+
+  #define MOTOR_PIN_LEFT   4
+  #define MOTOR_PIN_RIGHT  5
+  #define MOTOR_PIN_BACK   6
 #else
   #error "대상 보드가 정의되지 않았습니다. platformio.ini의 build_flags를 확인하세요."
 #endif

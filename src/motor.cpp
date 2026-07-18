@@ -3,10 +3,6 @@
 #include "audio.h"
 #include "config.h"
 
-constexpr int MOTOR_PIN_LEFT  = 4;
-constexpr int MOTOR_PIN_RIGHT = 5;
-constexpr int MOTOR_PIN_BACK  = 6;
-
 constexpr int PWM_FREQ = 200;
 constexpr int PWM_RES  = 8;              // ledcWrite duty: 0~255
 constexpr int PWM_MAX_DUTY = (1 << PWM_RES) - 1;
