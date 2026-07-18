@@ -62,9 +62,9 @@ void direction_update(const int16_t* l, const int16_t* r, const int16_t* b, long
 
         if (tdoa_lb < -TDOA_THRESHOLD && tdoa_rb < -TDOA_THRESHOLD) {
             vote = Direction::BACK;
-        } else if (tdoa_lr > TDOA_THRESHOLD) {
-            vote = Direction::LEFT;
         } else if (tdoa_lr < -TDOA_THRESHOLD) {
+            vote = Direction::LEFT;
+        } else if (tdoa_lr > TDOA_THRESHOLD) {
             vote = Direction::RIGHT;
         } else if (tdoa_lb > TDOA_THRESHOLD && tdoa_rb > TDOA_THRESHOLD) {
             vote = Direction::FRONT;
