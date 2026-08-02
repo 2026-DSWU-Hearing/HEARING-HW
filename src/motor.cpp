@@ -1,6 +1,7 @@
 #include "motor.h"
 #include <Arduino.h>
 #include "audio.h"
+#include "battery.h"
 #include "config.h"
 
 constexpr int PWM_FREQ = 200;
@@ -15,9 +16,13 @@ void motor_init() {
     ledcAttach(MOTOR_PIN_BACK,  PWM_FREQ, PWM_RES);
 }
 
+// 모터는 배터리 원 전압(3.0~4.2V)을 그대로 받으므로, 전압 대비 듀티를 보정해 실효 전압을 strength% of MOTOR_RATED_VOLTAGE로 고정.
 static void write_duty(int pin, uint8_t strength) {
-    int duty = (int)strength * PWM_MAX_DUTY / 100;
-    ledcWrite(pin, duty);
+    float battery_v = battery_get_voltage();
+    float target_v  = (strength / 100.0f) * MOTOR_RATED_VOLTAGE;
+    float duty_frac  = (battery_v > 0.0f) ? (target_v / battery_v) : 0.0f;
+    duty_frac = constrain(duty_frac, 0.0f, 1.0f);
+    ledcWrite(pin, (int)(duty_frac * PWM_MAX_DUTY));
 }
 
 static void all_off() {

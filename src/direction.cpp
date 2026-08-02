@@ -12,8 +12,7 @@ void direction_reset() {
     vote_idx = 0;
 }
 
-// 서브샘플 보간 포함 cross-correlation peak 위치 반환 (float)
-// 반환값 d > 0: a가 b보다 앞서 도달 / d < 0: b가 a보다 앞서 도달
+// cross-correlation peak 위치 반환(서브샘플 보간). d>0: a가 먼저 도달, d<0: b가 먼저 도달.
 static float cross_corr_peak(const int16_t* a, const int16_t* b) {
     constexpr int N = 2 * MAX_TDOA_SAMPLES + 1;
     float corr[N];
@@ -51,8 +50,7 @@ void direction_update(const int16_t* l, const int16_t* r, const int16_t* b, long
     // skip되는 블록도 슬롯 자체는 항상 흘려보내야 vote_buf가 실제 경과 시간과 맞음
     Direction vote = Direction::UNKNOWN;
 
-    // frames로 나눠야 main.cpp의 트리거 판정과 기준이 일치하고,
-    // 세 마이크 중 뒤쪽(B)만 큰 소리(BACK 방향)도 게이트를 통과할 수 있다.
+    // frames로 나눠야 main.cpp 트리거 기준과 일치하고, B만 큰 소리(BACK)도 게이트 통과 가능.
     if (frames > 0 && max(energy_l, max(energy_r, energy_b)) / frames >= TRIGGER_THRESHOLD) {
         float tdoa_lr = cross_corr_peak(l, r);
         float tdoa_lb = cross_corr_peak(l, b);

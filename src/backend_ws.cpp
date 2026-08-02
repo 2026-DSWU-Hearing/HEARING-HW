@@ -6,6 +6,7 @@
 #include "secrets.h"
 #include "motor.h"
 #include "direction.h"
+#include "battery.h"
 
 using namespace websockets;
 
@@ -36,14 +37,13 @@ static void on_message(WebsocketsMessage msg) {
     if (strcmp(type, "vibrate") == 0) {
         int strength = doc["strength"] | 0;
         strength = constrain(strength, 0, 100);
-        // TODO: 백엔드 direction 필드 추가 전까지는 항상 UNKNOWN으로 들어와서 진동 안 울림.
         Direction dir = parse_direction(doc["direction"] | (const char*)nullptr);
         Serial.printf("vibrate 수신: strength=%d direction=%s\n", strength, direction_to_str(dir));
         motor_vibrate(dir, (uint8_t)strength);
     }
 }
 
-// 재연결 시도. 성공 시 콜백 등록은 connect() 이전에 이미 되어 있어야 함.
+// connect() 전에 onMessage 콜백이 이미 등록돼 있어야 함(최초 연결/재연결 공통 호출).
 static bool try_connect() {
     String url = String("ws://") + backend_ws_host + ":" + backend_ws_port +
                  "/ws/devices?token=" + backend_device_token +
@@ -54,7 +54,7 @@ static bool try_connect() {
 static void send_status() {
     JsonDocument doc;
     doc["type"] = "status";
-    doc["battery_level"] = 100;   // TODO: 실제 배터리 ADC 연결 후 계산값으로 교체
+    doc["battery_level"] = battery_get_percent();
     doc["connection_type"] = "wifi";
     String out;
     serializeJson(doc, out);
@@ -72,11 +72,11 @@ static void backend_task(void* param) {
             uint32_t now = millis();
             if (now - last_reconnect_attempt_ms >= RECONNECT_INTERVAL_MS) {
                 last_reconnect_attempt_ms = now;
-                Serial.println("백엔드 소켓 연결 시도...");
+                Serial.println("백엔드 웹소켓 연결 시도...");
                 if (try_connect()) {
-                    Serial.println("백엔드 소켓 연결됨");
+                    Serial.println("백엔드 웹소켓 연결됨");
                 } else {
-                    Serial.println("백엔드 소켓 연결 실패, 재시도 예정");
+                    Serial.println("백엔드 웹소켓 연결 실패, 재시도 예정");
                 }
             }
         } else {

@@ -89,8 +89,7 @@ int audio_read_block(long* energy_l, long* energy_r, long* energy_b) {
         int16_t r = (int16_t)(samples_i2s0[i * 2 + 1] >> 16);
         int16_t b = (int16_t)(samples_i2s1[i * 2]     >> 16);
 
-        // 무음 구간 동안은 ring buffer 쓰기만 건너뛴다 — 진동 노이즈가 섞인 샘플이 기록되지 않기 위함.
-        // I2S 읽기 자체는 DMA 타이밍 유지를 위해 계속 수행한다.
+        // 무음 중엔 ring buffer 쓰기만 스킵(진동 노이즈 방지). I2S 읽기는 DMA 타이밍 유지를 위해 계속 수행.
         if (!muted) {
             ring_buf[write_idx] = l;
             write_idx = (write_idx + 1) % SAMPLE_RATE;
@@ -105,8 +104,7 @@ int audio_read_block(long* energy_l, long* energy_r, long* energy_b) {
         *energy_b += abs(b);
     }
 
-    // 읽은 프레임이 BLOCK_SIZE보다 짧으면 나머지를 0으로 채워
-    // 이전 블록의 오래된 샘플이 남아있지 않도록 한다.
+    // 프레임 부족분은 0으로 채워 이전 블록의 잔여 샘플이 안 남게 함.
     for (int i = frames; i < BLOCK_SIZE; i++) {
         block_l[i] = 0;
         block_r[i] = 0;

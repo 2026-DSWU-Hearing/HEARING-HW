@@ -7,10 +7,13 @@
   #define I2S0_SD  32   // mic_l (L ch), mic_r (R ch)
   #define I2S1_SD  16   // mic_b (L ch)
 
-  // 모터 미배선. 값 자체는 미사용.
+  // 모터/배터리/LED 미배선. 값 자체는 미사용.
   #define MOTOR_PIN_LEFT   4
   #define MOTOR_PIN_RIGHT  5
   #define MOTOR_PIN_BACK   6
+  #define BATTERY_ADC_PIN  2
+  #define LED_RED_PIN      7
+  #define LED_GREEN_PIN    8
 #elif defined(BOARD_ESP32_S3)
   #define I2S_SCK  15
   #define I2S_WS   14
@@ -20,6 +23,11 @@
   #define MOTOR_PIN_LEFT   4
   #define MOTOR_PIN_RIGHT  5
   #define MOTOR_PIN_BACK   6
+
+  #define BATTERY_ADC_PIN  2  // 배터리 전압 분배(100K/100K, 1/2 분배) 측정 핀
+  
+  #define LED_RED_PIN      7  // 배터리 잔량 표시 LED(적색)
+  #define LED_GREEN_PIN    8  // 배터리 잔량 표시 LED(녹색)
 #else
   #error "대상 보드가 정의되지 않았습니다. platformio.ini의 build_flags를 확인하세요."
 #endif
@@ -39,3 +47,11 @@ constexpr int   VOTE_BUF_SIZE    = SAMPLE_RATE / BLOCK_SIZE + 1;
 
 constexpr uint32_t AUDIO_MUTE_AFTER_VIBRATE_MS = 1000; // 모터 진동 시작부터 노이즈 방지용 무음 구간
 constexpr uint32_t VIBRATE_DURATION_MS = 500; // 진동 지속시간 0.5초
+
+constexpr float    BATTERY_DIVIDER_RATIO      = 2.0f;  // 100K/100K -> GPIO2 전압의 2배가 배터리 전압
+constexpr float    BATTERY_FULL_VOLTAGE       = 4.2f;  // 100%
+constexpr float    BATTERY_EMPTY_VOLTAGE      = 3.3f;  // 0% (TP4056 보호회로 컷오프보다 여유 있게)
+constexpr uint8_t  BATTERY_LOW_THRESHOLD_PCT  = 20;    // 이 미만이면 LED 빨강
+constexpr uint32_t BATTERY_CHECK_INTERVAL_MS  = 5000;
+
+constexpr float MOTOR_RATED_VOLTAGE = 3.0f; // 코인형 진동모터 정격전압
