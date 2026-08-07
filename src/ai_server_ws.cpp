@@ -4,12 +4,12 @@
 #include <ArduinoWebsockets.h>
 #include <freertos/queue.h>
 #include "secrets.h"
+#include "net_reconnect.h"
 
 using namespace websockets;
 
 static WebsocketsClient ai_ws_client;
 
-static const uint32_t WIFI_RECONNECT_INTERVAL_MS  = 3000;
 static const uint32_t AI_WS_RECONNECT_INTERVAL_MS = 3000;
 
 static const size_t PACKET_SIZE = 4 + SAMPLE_RATE * sizeof(int16_t); // [1바이트 방향][3바이트 패딩][PCM int16 데이터]
@@ -39,30 +39,13 @@ static void ai_ws_task(void* param) {
         Serial.println(msg.data());
     });
 
-    uint32_t last_wifi_reconnect_ms = 0;
-    uint32_t last_ws_reconnect_ms   = 0;
+    uint32_t last_ws_reconnect_ms = 0;
     AudioPacket pkt;
 
     for (;;) {
-        uint32_t now = millis();
-
-        if (WiFi.status() != WL_CONNECTED) {
-            if (now - last_wifi_reconnect_ms >= WIFI_RECONNECT_INTERVAL_MS) {
-                last_wifi_reconnect_ms = now;
-                Serial.println("WiFi 연결 시도...");
-                WiFi.reconnect();
-            }
-        } else if (!ai_ws_client.available()) {
-            if (now - last_ws_reconnect_ms >= AI_WS_RECONNECT_INTERVAL_MS) {
-                last_ws_reconnect_ms = now;
-                Serial.println("AI서버 웹소켓 연결 시도...");
-                if (ai_ws_client.connect(build_ws_url())) {
-                    Serial.println("AI서버 웹소켓 연결됨");
-                } else {
-                    Serial.println("AI서버 웹소켓 연결 실패, 재시도 예정");
-                }
-            }
-        } else {
+        wifi_ensure_connected();
+        if (WiFi.status() == WL_CONNECTED &&
+            ws_ensure_connected(ai_ws_client, build_ws_url, "AI서버", AI_WS_RECONNECT_INTERVAL_MS, last_ws_reconnect_ms)) {
             ai_ws_client.poll();
         }
 

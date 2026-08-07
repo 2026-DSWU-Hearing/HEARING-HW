@@ -7,6 +7,7 @@
 #include "motor.h"
 #include "direction.h"
 #include "battery.h"
+#include "net_reconnect.h"
 
 using namespace websockets;
 
@@ -43,12 +44,10 @@ static void on_message(WebsocketsMessage msg) {
     }
 }
 
-// connect() 전에 onMessage 콜백이 이미 등록돼 있어야 함(최초 연결/재연결 공통 호출).
-static bool try_connect() {
-    String url = String("ws://") + backend_ws_host + ":" + backend_ws_port +
+static String build_backend_url() {
+    return String("ws://") + backend_ws_host + ":" + backend_ws_port +
                  "/ws/devices?token=" + backend_device_token +
                  "&mac=" + WiFi.macAddress();
-    return backend_ws_client.connect(url);
 }
 
 static void send_status() {
@@ -68,18 +67,9 @@ static void backend_task(void* param) {
     uint32_t last_status_ms = 0;
 
     for (;;) {
-        if (!backend_ws_client.available()) {
-            uint32_t now = millis();
-            if (now - last_reconnect_attempt_ms >= RECONNECT_INTERVAL_MS) {
-                last_reconnect_attempt_ms = now;
-                Serial.println("백엔드 웹소켓 연결 시도...");
-                if (try_connect()) {
-                    Serial.println("백엔드 웹소켓 연결됨");
-                } else {
-                    Serial.println("백엔드 웹소켓 연결 실패, 재시도 예정");
-                }
-            }
-        } else {
+        wifi_ensure_connected();
+        if (WiFi.status() == WL_CONNECTED &&
+            ws_ensure_connected(backend_ws_client, build_backend_url, "백엔드", RECONNECT_INTERVAL_MS, last_reconnect_attempt_ms)) {
             backend_ws_client.poll();
 
             uint32_t now = millis();
