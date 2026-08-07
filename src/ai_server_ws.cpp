@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <ArduinoWebsockets.h>
 #include <freertos/queue.h>
+#include <esp_heap_caps.h>
 #include "secrets.h"
 #include "net_reconnect.h"
 
@@ -16,7 +17,8 @@ static const size_t PACKET_SIZE = 4 + SAMPLE_RATE * sizeof(int16_t); // [1바이
 
 // core 1이 채워서 core 0로 넘길 이중 버퍼. busy 중엔 재사용 안 함.
 // core 1은 매 사이클 ai_ws_get_pcm_buf()로 빈 슬롯을 얻어 PCM을 직접 써넣는다(중간 스크래치 버퍼 없음).
-static uint8_t net_bufs[2][PACKET_SIZE];
+// PSRAM에 할당(ai_ws_start에서) — 오디오 전송은 0.5초에 한 번뿐이라 PSRAM 지연이 문제되지 않음.
+static uint8_t* net_bufs[2] = { nullptr, nullptr };
 static volatile bool net_buf_busy[2] = { false, false };
 
 // ai_ws_get_pcm_buf()가 고른, 아직 ai_ws_send()로 커밋되지 않은 슬롯. -1이면 없음.
@@ -58,6 +60,12 @@ static void ai_ws_task(void* param) {
 }
 
 void ai_ws_start() {
+    for (int i = 0; i < 2; i++) {
+        net_bufs[i] = (uint8_t*)heap_caps_malloc(PACKET_SIZE, MALLOC_CAP_SPIRAM);
+        if (net_bufs[i] == nullptr) {
+            Serial.println("PSRAM 전송 버퍼 할당 실패");
+        }
+    }
     WiFi.begin(ssid, password);
     audio_queue = xQueueCreate(2, sizeof(AudioPacket));
     xTaskCreatePinnedToCore(ai_ws_task, "ai_ws", 8192, NULL, 1, NULL, 0);
@@ -65,8 +73,8 @@ void ai_ws_start() {
 
 // core 1에서 호출. 빈 슬롯이 없으면 nullptr 반환 — 이때 호출부는 audio_flatten/ai_ws_send를 건너뛰어야 함.
 int16_t* ai_ws_get_pcm_buf() {
-    if (!net_buf_busy[0])      pending_idx = 0;
-    else if (!net_buf_busy[1]) pending_idx = 1;
+    if (net_bufs[0] != nullptr && !net_buf_busy[0])      pending_idx = 0;
+    else if (net_bufs[1] != nullptr && !net_buf_busy[1]) pending_idx = 1;
     else {
         pending_idx = -1;
         Serial.println("AI서버 전송 버퍼 가득 참, 오디오 블록 드롭");
