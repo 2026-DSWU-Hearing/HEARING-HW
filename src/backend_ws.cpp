@@ -67,8 +67,7 @@ static void backend_task(void* param) {
     uint32_t last_status_ms = 0;
 
     for (;;) {
-        wifi_ensure_connected();
-        if (WiFi.status() == WL_CONNECTED &&
+        if (wifi_ensure_connected() &&
             ws_ensure_connected(backend_ws_client, build_backend_url, "백엔드", RECONNECT_INTERVAL_MS, last_reconnect_attempt_ms)) {
             backend_ws_client.poll();
 

@@ -5,8 +5,8 @@ static const uint32_t WIFI_RECONNECT_INTERVAL_MS = 3000;
 static uint32_t last_wifi_reconnect_ms = 0;
 static portMUX_TYPE wifi_reconnect_mux = portMUX_INITIALIZER_UNLOCKED;
 
-void wifi_ensure_connected() {
-    if (WiFi.status() == WL_CONNECTED) return;
+bool wifi_ensure_connected() {
+    if (WiFi.status() == WL_CONNECTED) return true;
 
     uint32_t now = millis();
     bool should_reconnect = false;
@@ -23,6 +23,7 @@ void wifi_ensure_connected() {
         Serial.println("WiFi 연결 시도...");
         WiFi.reconnect();
     }
+    return false;
 }
 
 bool ws_ensure_connected(websockets::WebsocketsClient& client, String (*url_builder)(),
