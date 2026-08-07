@@ -48,8 +48,11 @@ void detector_process() {
     Serial.printf("방향: %s\n", direction_to_str(dir));
     direction_reset();
 
-    audio_flatten(ai_ws_get_pcm_buf());
-    ai_ws_send(dir, SAMPLE_RATE);
+    int16_t* pcm_buf = ai_ws_get_pcm_buf();
+    if (pcm_buf != nullptr) {
+        audio_flatten(pcm_buf);
+        ai_ws_send(dir, SAMPLE_RATE);
+    }
 
     long avg_volume = energy_acc / sample_counter;
     Serial.printf("volume: %ld\n", avg_volume);

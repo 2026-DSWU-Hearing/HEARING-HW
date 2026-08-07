@@ -14,11 +14,14 @@ static const uint32_t AI_WS_RECONNECT_INTERVAL_MS = 3000;
 
 static const size_t PACKET_SIZE = 4 + SAMPLE_RATE * sizeof(int16_t); // [1바이트 방향][3바이트 패딩][PCM int16 데이터]
 
-static uint8_t send_buf[PACKET_SIZE]; // core 1 오디오 캡처 루프가 채워 넣는 스크래치 버퍼
-
-// core 0로 넘길 이중 버퍼. busy 중엔 재사용 안 함.
+// core 1이 채워서 core 0로 넘길 이중 버퍼. busy 중엔 재사용 안 함.
+// core 1은 매 사이클 ai_ws_get_pcm_buf()로 빈 슬롯을 얻어 PCM을 직접 써넣는다(중간 스크래치 버퍼 없음).
 static uint8_t net_bufs[2][PACKET_SIZE];
 static volatile bool net_buf_busy[2] = { false, false };
+
+// ai_ws_get_pcm_buf()가 고른, 아직 ai_ws_send()로 커밋되지 않은 슬롯. -1이면 없음.
+// net_buf_busy는 ai_ws_send()만 true로 바꾼다(get_pcm_buf는 읽기만 함) — 호출 짝이 깨져도 슬롯이 영구 busy로 안 남게.
+static int pending_idx = -1;
 
 struct AudioPacket {
     uint8_t idx;
@@ -78,28 +81,31 @@ void ai_ws_start() {
     xTaskCreatePinnedToCore(ai_ws_task, "ai_ws", 8192, NULL, 1, NULL, 0);
 }
 
+// core 1에서 호출. 빈 슬롯이 없으면 nullptr 반환 — 이때 호출부는 audio_flatten/ai_ws_send를 건너뛰어야 함.
 int16_t* ai_ws_get_pcm_buf() {
-    return (int16_t*)(send_buf + 4);
+    if (!net_buf_busy[0])      pending_idx = 0;
+    else if (!net_buf_busy[1]) pending_idx = 1;
+    else {
+        pending_idx = -1;
+        Serial.println("AI서버 전송 버퍼 가득 참, 오디오 블록 드롭");
+        return nullptr;
+    }
+    return (int16_t*)(net_bufs[pending_idx] + 4);
 }
 
-// core 1에서 호출. 블로킹 금지 — 보낼 버퍼가 없으면 즉시 드롭.
+// core 1에서 호출. 블로킹 금지. ai_ws_get_pcm_buf()가 nullptr을 반환했을 땐 호출하지 말 것(방어적으로 그래도 no-op).
 void ai_ws_send(Direction dir, int num_samples) {
-    send_buf[0] = static_cast<uint8_t>(dir);
-    send_buf[1] = 0;
-    send_buf[2] = 0;
-    send_buf[3] = 0;
+    if (pending_idx < 0) return;
+    int idx = pending_idx;
+    pending_idx = -1;
 
-    int idx = -1;
-    if (!net_buf_busy[0])      idx = 0;
-    else if (!net_buf_busy[1]) idx = 1;
-    if (idx < 0) {
-        Serial.println("AI서버 전송 버퍼 가득 참, 오디오 블록 드롭");
-        return;
-    }
+    net_bufs[idx][0] = static_cast<uint8_t>(dir);
+    net_bufs[idx][1] = 0;
+    net_bufs[idx][2] = 0;
+    net_bufs[idx][3] = 0;
 
-    size_t len = 4 + num_samples * sizeof(int16_t);
     net_buf_busy[idx] = true;
-    memcpy(net_bufs[idx], send_buf, len);
+    size_t len = 4 + num_samples * sizeof(int16_t);
 
     AudioPacket pkt{ (uint8_t)idx, len };
     if (xQueueSend(audio_queue, &pkt, 0) != pdTRUE) {
