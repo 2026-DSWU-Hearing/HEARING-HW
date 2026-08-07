@@ -3,14 +3,26 @@
 
 static const uint32_t WIFI_RECONNECT_INTERVAL_MS = 3000;
 static uint32_t last_wifi_reconnect_ms = 0;
+static portMUX_TYPE wifi_reconnect_mux = portMUX_INITIALIZER_UNLOCKED;
 
 void wifi_ensure_connected() {
     if (WiFi.status() == WL_CONNECTED) return;
+
     uint32_t now = millis();
-    if (now - last_wifi_reconnect_ms < WIFI_RECONNECT_INTERVAL_MS) return;
-    last_wifi_reconnect_ms = now;
-    Serial.println("WiFi 연결 시도...");
-    WiFi.reconnect();
+    bool should_reconnect = false;
+
+    // 체크+갱신을 원자적으로 묶어 두 태스크가 동시에 통과하는 것 방지.
+    portENTER_CRITICAL(&wifi_reconnect_mux);
+    if (now - last_wifi_reconnect_ms >= WIFI_RECONNECT_INTERVAL_MS) {
+        last_wifi_reconnect_ms = now;
+        should_reconnect = true;
+    }
+    portEXIT_CRITICAL(&wifi_reconnect_mux);
+
+    if (should_reconnect) {
+        Serial.println("WiFi 연결 시도...");
+        WiFi.reconnect();
+    }
 }
 
 bool ws_ensure_connected(websockets::WebsocketsClient& client, String (*url_builder)(),
