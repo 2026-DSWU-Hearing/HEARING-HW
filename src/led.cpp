@@ -6,6 +6,7 @@
 void led_init() {
     pinMode(LED_GREEN_PIN, OUTPUT);
     pinMode(LED_RED_PIN, OUTPUT);
+    led_update(battery_get_percent()); // 부팅 직후 LED 상태 즉시 반영
 }
 
 void led_update(uint8_t percent) {
