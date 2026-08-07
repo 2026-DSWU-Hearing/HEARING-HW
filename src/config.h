@@ -55,3 +55,4 @@ constexpr uint8_t  BATTERY_LOW_THRESHOLD_PCT  = 20;    // 이 미만이면 LED �
 constexpr uint32_t BATTERY_CHECK_INTERVAL_MS  = 5000;
 
 constexpr float MOTOR_RATED_VOLTAGE = 3.0f; // 코인형 진동모터 정격전압
+constexpr float MOTOR_MIN_VALID_BATTERY_V = 2.0f; // 이 미만이면 ADC 오류(미배선/헐거움)로 보고 전압보정 포기

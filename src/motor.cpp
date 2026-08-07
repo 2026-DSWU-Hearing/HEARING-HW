@@ -19,8 +19,12 @@ void motor_init() {
 // 모터는 배터리 원 전압(3.0~4.2V)을 그대로 받으므로, 전압 대비 듀티를 보정해 실효 전압을 strength% of MOTOR_RATED_VOLTAGE로 고정.
 static void write_duty(int pin, uint8_t strength) {
     float battery_v = battery_get_voltage();
+    // 비정상적으로 낮으면(ADC 미배선 등) 보정 포기 — 안 그러면 나눗셈 결과가 비정상적으로 커져 항상 최대 duty로 튐
+    if (battery_v < MOTOR_MIN_VALID_BATTERY_V) {
+        battery_v = MOTOR_RATED_VOLTAGE;
+    }
     float target_v  = (strength / 100.0f) * MOTOR_RATED_VOLTAGE;
-    float duty_frac  = (battery_v > 0.0f) ? (target_v / battery_v) : 0.0f;
+    float duty_frac  = target_v / battery_v;
     duty_frac = constrain(duty_frac, 0.0f, 1.0f);
     ledcWrite(pin, (int)(duty_frac * PWM_MAX_DUTY));
 }
