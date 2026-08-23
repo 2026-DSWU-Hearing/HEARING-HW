@@ -11,7 +11,8 @@
 void setup() {
     Serial.begin(115200);
 
-    // DEBUG: 주변 와이파이 스캔 (부팅 시 신호 확인용)
+    // DEBUG: 주변 와이파이 스캔 (부팅 시 신호 확인용). 블로킹 호출이라 LED 초기화를 지연시켜 주석 처리.
+    /*
     Serial.println("\n주변 와이파이 검색 중...");
     int n = WiFi.scanNetworks();
     if (n == 0) {
@@ -22,6 +23,7 @@ void setup() {
             Serial.printf("%d: %s (신호강도: %d)\n", i + 1, WiFi.SSID(i).c_str(), WiFi.RSSI(i));
         }
     }
+    */
 
     audio_init();
     ai_ws_start();
