@@ -30,7 +30,7 @@ struct AudioPacket {
 static QueueHandle_t audio_queue;
 
 static String build_ws_url() {
-    return String("ws://") + websockets_server_host + ":" + websockets_server_port + "/ws";
+    return String("ws://") + websockets_server_host + ":" + websockets_server_port + "/ws/neckband";
 }
 
 // core 0 전용 태스크: WiFi/웹소켓 재연결 + 오디오 전송. core 1 오디오 캡처와 완전히 분리.

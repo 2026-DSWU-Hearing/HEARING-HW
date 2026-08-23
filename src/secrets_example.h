@@ -9,7 +9,7 @@
 static const char* ssid = "your_ssid";
 static const char* password = "your_password";
 
-// AI서버 /ws 접속용
+// AI서버 /ws/neckband 접속용
 static const char* websockets_server_host = "your_server_ip";
 static const uint16_t websockets_server_port = 8765;
 
