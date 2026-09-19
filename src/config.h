@@ -47,6 +47,12 @@ constexpr int   VOTE_BUF_SIZE    = SAMPLE_RATE / BLOCK_SIZE + 1;
 
 constexpr uint32_t AUDIO_MUTE_AFTER_VIBRATE_MS = 1000; // 모터 진동 시작부터 노이즈 방지용 무음 구간
 constexpr uint32_t VIBRATE_DURATION_MS = 500; // 진동 지속시간 0.5초
+constexpr uint32_t VIBRATE_COOLDOWN_MS = 3000; // 진동 후 이 시간 동안은 새 진동 요청 무시 (온디바이스/백엔드 공통)
+
+// 온디바이스 AI 위험음 즉시 진동. 끄려면 build_flags에 -D ONDEVICE_AI_ENABLED=0 (기존 방식으로 동작)
+#ifndef ONDEVICE_AI_ENABLED
+#define ONDEVICE_AI_ENABLED 1
+#endif
 
 constexpr float    BATTERY_DIVIDER_RATIO      = 2.0f;  // 100K/100K -> GPIO2 전압의 2배가 배터리 전압
 constexpr float    BATTERY_FULL_VOLTAGE       = 4.2f;  // 100%

@@ -10,6 +10,11 @@ constexpr int PWM_MAX_DUTY = (1 << PWM_RES) - 1;
 
 static volatile uint32_t vibrate_until_ms = 0;
 
+// 진동 쿨다운. 온디바이스 판정과 백엔드 명령이 둘 다 motor_vibrate()를 부르므로 확인+갱신을 잠금으로 묶음.
+static uint32_t     last_vibrate_ms = 0;
+static bool         has_vibrated    = false;
+static portMUX_TYPE vibrate_mux     = portMUX_INITIALIZER_UNLOCKED;
+
 void motor_init() {
     ledcAttach(MOTOR_PIN_LEFT,  PWM_FREQ, PWM_RES);
     ledcAttach(MOTOR_PIN_RIGHT, PWM_FREQ, PWM_RES);
@@ -36,6 +41,23 @@ static void all_off() {
 }
 
 void motor_vibrate(Direction dir, uint8_t strength) {
+    // 쿨다운은 실제로 진동하는 방향(LEFT/RIGHT/BACK)에만 적용
+    if (dir == Direction::LEFT || dir == Direction::RIGHT || dir == Direction::BACK) {
+        uint32_t now = millis();
+        bool allowed = false;
+        portENTER_CRITICAL(&vibrate_mux);
+        if (!has_vibrated || (uint32_t)(now - last_vibrate_ms) >= VIBRATE_COOLDOWN_MS) {
+            last_vibrate_ms = now;
+            has_vibrated    = true;
+            allowed         = true;
+        }
+        portEXIT_CRITICAL(&vibrate_mux);
+        if (!allowed) {
+            Serial.println("진동 쿨다운 중, 요청 무시");
+            return;
+        }
+    }
+
     all_off();
     switch (dir) {
         case Direction::LEFT:

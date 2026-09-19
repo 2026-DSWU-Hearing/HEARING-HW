@@ -6,6 +6,9 @@
 #include <esp_heap_caps.h>
 #include "secrets.h"
 #include "net_reconnect.h"
+#include "motor.h"
+#include "settings.h"
+#include "ondevice_ai.h"
 
 using namespace websockets;
 
@@ -13,7 +16,7 @@ static WebsocketsClient ai_ws_client;
 
 static const uint32_t AI_WS_RECONNECT_INTERVAL_MS = 3000;
 
-static const size_t PACKET_SIZE = 4 + SAMPLE_RATE * sizeof(int16_t); // [1바이트 방향][3바이트 패딩][PCM int16 데이터]
+static const size_t PACKET_SIZE = 4 + SAMPLE_RATE * sizeof(int16_t); // [1바이트 방향][1바이트 온디바이스 판정][2바이트 패딩][PCM int16 데이터]
 
 // core 1이 채워서 core 0로 넘길 이중 버퍼. busy 중엔 재사용 안 함.
 // core 1은 매 사이클 ai_ws_get_pcm_buf()로 빈 슬롯을 얻어 PCM을 직접 써넣는다(중간 스크래치 버퍼 없음).
@@ -29,7 +32,10 @@ struct AudioPacket {
     uint8_t idx;
     size_t  len;
 };
-static QueueHandle_t audio_queue;
+static QueueHandle_t audio_queue;  // 전송 대기열: ai_ws_task가 꺼내서 AI서버로 전송
+#if ONDEVICE_AI_ENABLED
+static QueueHandle_t infer_queue;  // 추론 대기열: ondevice_task가 꺼내서 판정 후 audio_queue로 넘김
+#endif
 
 static String build_ws_url() {
     return String("ws://") + websockets_server_host + ":" + websockets_server_port + "/ws/neckband";
@@ -59,6 +65,57 @@ static void ai_ws_task(void* param) {
     }
 }
 
+#if ONDEVICE_AI_ENABLED
+// core 0 전용 태스크: 온디바이스 AI로 먼저 판정하고 결과 플래그를 패킷에 넣어 ai_ws_task로 넘김.
+// 전송 태스크와 분리해 추론 중에도 웹소켓 poll/재연결이 멈추지 않게 함.
+static void ondevice_task(void* param) {
+    // 모델 로딩은 스택 여유가 있는 이 태스크에서 함. 실패해도 패킷은 계속 전달(온디바이스만 꺼진 상태).
+    bool ready = ondevice_ai_init();
+    if (!ready) {
+        Serial.println("[온디바이스AI] 사용 불가, AI서버 전송만 계속");
+    }
+
+    AudioPacket pkt;
+    uint32_t count = 0;
+
+    for (;;) {
+        xQueueReceive(infer_queue, &pkt, portMAX_DELAY);
+
+        uint8_t* buf = net_bufs[pkt.idx];
+        uint8_t judged = 0;  // 패킷 [1]번 바이트: 1이면 온디바이스가 긴급으로 판정
+
+        // 버튼 꺼짐/방해금지 중엔 추론 자체를 스킵.
+        if (ready && settings_emergency_alert_enabled() && !settings_do_not_disturb()) {
+            Direction dir = (Direction)buf[0];
+            uint32_t feature_us = 0, infer_us = 0;
+            float prob = ondevice_ai_infer((const int16_t*)(buf + 4), &feature_us, &infer_us);
+
+            if (prob >= 0.0f) {
+                judged = (prob >= ONDEVICE_AI_THRESHOLD) ? 1 : 0;
+                Serial.printf("[온디바이스AI] 긴급확률=%.3f (%s) 방향=%s | 특징 %u us, 추론 %u us\n",
+                              prob, judged ? "긴급" : "일반", direction_to_str(dir),
+                              (unsigned)feature_us, (unsigned)infer_us);
+                if (judged) {
+                    motor_vibrate(dir, settings_haptic_strength());
+                }
+            }
+        }
+        buf[1] = judged;
+
+        if (xQueueSend(audio_queue, &pkt, 0) != pdTRUE) {
+            net_buf_busy[pkt.idx] = false;
+            Serial.println("AI서버 전송 큐 가득 참, 오디오 블록 드롭");
+        }
+
+        // 스택 여유 확인용: 20패킷마다 최소 남은 양 출력
+        if (++count % 20 == 0) {
+            Serial.printf("[온디바이스AI] 스택 최소 남은 양: %u 바이트\n",
+                          (unsigned)uxTaskGetStackHighWaterMark(NULL));
+        }
+    }
+}
+#endif
+
 void ai_ws_start() {
     for (int i = 0; i < 2; i++) {
         net_bufs[i] = (uint8_t*)heap_caps_malloc(PACKET_SIZE, MALLOC_CAP_SPIRAM);
@@ -68,6 +125,10 @@ void ai_ws_start() {
     }
     WiFi.begin(ssid, password);
     audio_queue = xQueueCreate(2, sizeof(AudioPacket));
+#if ONDEVICE_AI_ENABLED
+    infer_queue = xQueueCreate(2, sizeof(AudioPacket));
+    xTaskCreatePinnedToCore(ondevice_task, "ondevice_ai", 16384, NULL, 1, NULL, 0);
+#endif
     xTaskCreatePinnedToCore(ai_ws_task, "ai_ws", 8192, NULL, 1, NULL, 0);
 }
 
@@ -98,7 +159,12 @@ void ai_ws_send(Direction dir, int num_samples) {
     size_t len = 4 + num_samples * sizeof(int16_t);
 
     AudioPacket pkt{ (uint8_t)idx, len };
-    if (xQueueSend(audio_queue, &pkt, 0) != pdTRUE) {
+#if ONDEVICE_AI_ENABLED
+    QueueHandle_t next_queue = infer_queue;   // 온디바이스 판정을 먼저 거침
+#else
+    QueueHandle_t next_queue = audio_queue;   // 바로 전송
+#endif
+    if (xQueueSend(next_queue, &pkt, 0) != pdTRUE) {
         net_buf_busy[idx] = false;
         Serial.println("AI서버 전송 큐 가득 참, 오디오 블록 드롭");
     }
