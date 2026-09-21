@@ -33,6 +33,7 @@ struct AudioPacket {
     size_t  len;
 };
 static QueueHandle_t audio_queue;  // 전송 대기열: ai_ws_task가 꺼내서 AI서버로 전송
+static volatile bool ai_ws_connected = false;  // ai_ws_task가 갱신
 #if ONDEVICE_AI_ENABLED
 static QueueHandle_t infer_queue;  // 추론 대기열: ondevice_task가 꺼내서 판정 후 audio_queue로 넘김
 #endif
@@ -51,10 +52,12 @@ static void ai_ws_task(void* param) {
     AudioPacket pkt;
 
     for (;;) {
-        if (wifi_ensure_connected() &&
-            ws_ensure_connected(ai_ws_client, build_ws_url, "AI서버", AI_WS_RECONNECT_INTERVAL_MS, last_ws_reconnect_ms)) {
+        bool connected = wifi_ensure_connected() &&
+            ws_ensure_connected(ai_ws_client, build_ws_url, "AI서버", AI_WS_RECONNECT_INTERVAL_MS, last_ws_reconnect_ms);
+        if (connected) {
             ai_ws_client.poll();
         }
+        ai_ws_connected = connected;
 
         if (xQueueReceive(audio_queue, &pkt, pdMS_TO_TICKS(10)) == pdTRUE) {
             if (ai_ws_client.available()) {
@@ -102,7 +105,10 @@ static void ondevice_task(void* param) {
         }
         buf[1] = judged;
 
-        if (xQueueSend(audio_queue, &pkt, 0) != pdTRUE) {
+        // 미연결이면 버퍼 바로 반납 (접속 시도 블로킹에 버퍼가 묶여 추론이 멈추는 것 방지)
+        if (!ai_ws_connected) {
+            net_buf_busy[pkt.idx] = false;
+        } else if (xQueueSend(audio_queue, &pkt, 0) != pdTRUE) {
             net_buf_busy[pkt.idx] = false;
             Serial.println("AI서버 전송 큐 가득 참, 오디오 블록 드롭");
         }
