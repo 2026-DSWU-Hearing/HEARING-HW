@@ -8,6 +8,7 @@
 #include "direction.h"
 #include "battery.h"
 #include "net_reconnect.h"
+#include "net_log.h"
 
 using namespace websockets;
 

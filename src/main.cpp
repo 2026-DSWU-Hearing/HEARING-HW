@@ -7,6 +7,7 @@
 #include "battery.h"
 #include "led.h"
 #include "detector.h"
+#include "net_log.h"
 
 void setup() {
     Serial.begin(115200);

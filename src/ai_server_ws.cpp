@@ -9,6 +9,7 @@
 #include "motor.h"
 #include "settings.h"
 #include "ondevice_ai.h"
+#include "net_log.h"
 
 using namespace websockets;
 

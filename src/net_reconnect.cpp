@@ -1,5 +1,6 @@
 #include "net_reconnect.h"
 #include <WiFi.h>
+#include "net_log.h"
 
 static const uint32_t WIFI_RECONNECT_INTERVAL_MS = 3000;
 static uint32_t last_wifi_reconnect_ms = 0;

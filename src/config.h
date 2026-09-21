@@ -54,6 +54,11 @@ constexpr uint32_t VIBRATE_COOLDOWN_MS = 3000; // 진동 후 이 시간 동안�
 #define ONDEVICE_AI_ENABLED 1
 #endif
 
+// WiFi 로그 (테스트용, net_log.h)
+#ifndef NET_LOG_ENABLED
+#define NET_LOG_ENABLED 0
+#endif
+
 constexpr float    BATTERY_DIVIDER_RATIO      = 2.0f;  // 100K/100K -> GPIO2 전압의 2배가 배터리 전압
 constexpr float    BATTERY_FULL_VOLTAGE       = 4.2f;  // 100%
 constexpr float    BATTERY_EMPTY_VOLTAGE      = 3.3f;  // 0% (TP4056 보호회로 컷오프보다 여유 있게)

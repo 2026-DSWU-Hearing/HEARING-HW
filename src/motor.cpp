@@ -3,6 +3,7 @@
 #include "audio.h"
 #include "battery.h"
 #include "config.h"
+#include "net_log.h"
 
 constexpr int PWM_FREQ = 200;
 constexpr int PWM_RES  = 8;              // ledcWrite duty: 0~255
