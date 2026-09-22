@@ -4,6 +4,7 @@
 #include <WiFi.h>
 #include <esp_heap_caps.h>
 #include <string.h>
+#include "secrets.h"
 
 NetLogPrint NetLog;
 
@@ -50,6 +51,29 @@ size_t buf_pop(uint8_t* out, size_t max_n) {
     return n;
 }
 
+// 접속 시 암호(secrets.h) 한 줄을 확인해야 로그 스트리밍 시작
+constexpr size_t LINE_BUF_SIZE = 64;
+
+void try_authenticate(WiFiClient& client, bool& authed, char* line, size_t& line_len) {
+    while (client.available()) {
+        char c = (char)client.read();
+        if (c == '\n' || c == '\r') {
+            if (line_len == 0) continue;
+            line[line_len] = '\0';
+            line_len = 0;
+            if (strcmp(line, net_log_password) == 0) {
+                authed = true;
+                client.println("OK");
+            } else {
+                client.println("denied");
+                client.stop();
+            }
+            return;
+        }
+        if (line_len < LINE_BUF_SIZE - 1) line[line_len++] = c;
+    }
+}
+
 // 쌓인 로그를 WiFi로 전송. 접속은 1개만
 void net_log_task(void* param) {
     vTaskDelay(pdMS_TO_TICKS(1000));  // WiFi.begin() 이후에 시작
@@ -57,6 +81,9 @@ void net_log_task(void* param) {
     WiFiServer server(NET_LOG_PORT);
     WiFiClient client;
     bool       listening = false;
+    bool       authed    = false;
+    char       line[LINE_BUF_SIZE];
+    size_t     line_len  = 0;
     IPAddress  last_ip;
     uint8_t    chunk[SEND_CHUNK];
 
@@ -79,17 +106,24 @@ void net_log_task(void* param) {
 
         if (server.hasClient()) {
             if (client) client.stop();
-            client = server.accept();
+            client   = server.accept();
             client.setNoDelay(true);
+            authed   = false;
+            line_len = 0;
+            client.println("password:");
         }
 
         if (client && client.connected()) {
-            while (client.available()) client.read();
-            size_t n;
-            while ((n = buf_pop(chunk, sizeof(chunk))) > 0) {
-                if (client.write(chunk, n) != n) {
-                    client.stop();
-                    break;
+            if (!authed) {
+                try_authenticate(client, authed, line, line_len);
+            } else {
+                while (client.available()) client.read();  // 단방향 로그, 입력 무시
+                size_t n;
+                while ((n = buf_pop(chunk, sizeof(chunk))) > 0) {
+                    if (client.write(chunk, n) != n) {
+                        client.stop();
+                        break;
+                    }
                 }
             }
         }
