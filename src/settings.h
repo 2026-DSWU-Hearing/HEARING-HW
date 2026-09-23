@@ -1,10 +1,9 @@
 #pragma once
 #include <stdint.h>
 
-// 기기에 보관하는 사용자 설정. 지금은 기본값으로 동작하고,
-// 백엔드가 설정을 내려주면 settings_set()으로 갱신 예정.
+// 백엔드 settings_update로 갱신되는 기기 설정
 
-// "긴급 소리 알림 받기". 꺼져 있으면 온디바이스 추론 안 함.
+// "긴급 소리 알림 받기" (백엔드 미연결 시엔 무시)
 bool    settings_emergency_alert_enabled();
 // 방해금지. 켜져 있으면 온디바이스 추론과 로컬 진동 안 함.
 bool    settings_do_not_disturb();

@@ -9,6 +9,7 @@
 #include "battery.h"
 #include "net_reconnect.h"
 #include "net_log.h"
+#include "settings.h"
 
 using namespace websockets;
 
@@ -43,6 +44,13 @@ static void on_message(WebsocketsMessage msg) {
         Direction dir = parse_direction(doc["direction"] | (const char*)nullptr);
         Serial.printf("vibrate 수신: strength=%d direction=%s\n", strength, direction_to_str(dir));
         motor_vibrate(dir, (uint8_t)strength, false);
+    } else if (strcmp(type, "settings_update") == 0) {
+        // 빠진 필드는 현재값 유지
+        bool emergency = doc["emergency_alert_enabled"] | settings_emergency_alert_enabled();
+        bool dnd       = doc["do_not_disturb"] | settings_do_not_disturb();
+        int  strength  = doc["haptic_strength"] | (int)settings_haptic_strength();
+        settings_set(emergency, dnd, (uint8_t)constrain(strength, 0, 100));
+        Serial.printf("settings_update 수신: emergency=%d dnd=%d strength=%d\n", emergency, dnd, strength);
     }
 }
 
