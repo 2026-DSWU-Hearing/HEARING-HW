@@ -13,6 +13,7 @@
 using namespace websockets;
 
 static WebsocketsClient backend_ws_client;
+static volatile bool    g_backend_connected = false;
 
 static const uint32_t RECONNECT_INTERVAL_MS = 3000;
 static const uint32_t STATUS_INTERVAL_MS    = 30000;
@@ -41,7 +42,7 @@ static void on_message(WebsocketsMessage msg) {
         strength = constrain(strength, 0, 100);
         Direction dir = parse_direction(doc["direction"] | (const char*)nullptr);
         Serial.printf("vibrate 수신: strength=%d direction=%s\n", strength, direction_to_str(dir));
-        motor_vibrate(dir, (uint8_t)strength);
+        motor_vibrate(dir, (uint8_t)strength, false);
     }
 }
 
@@ -68,8 +69,11 @@ static void backend_task(void* param) {
     uint32_t last_status_ms = 0;
 
     for (;;) {
-        if (wifi_ensure_connected() &&
-            ws_ensure_connected(backend_ws_client, build_backend_url, "백엔드", RECONNECT_INTERVAL_MS, last_reconnect_attempt_ms)) {
+        bool connected = wifi_ensure_connected() &&
+            ws_ensure_connected(backend_ws_client, build_backend_url, "백엔드", RECONNECT_INTERVAL_MS, last_reconnect_attempt_ms);
+        g_backend_connected = connected;
+
+        if (connected) {
             backend_ws_client.poll();
 
             uint32_t now = millis();
@@ -86,3 +90,5 @@ static void backend_task(void* param) {
 void backend_ws_start() {
     xTaskCreatePinnedToCore(backend_task, "backend_ws", 8192, NULL, 1, NULL, 0);
 }
+
+bool backend_ws_connected() { return g_backend_connected; }

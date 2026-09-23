@@ -10,6 +10,7 @@
 #include "settings.h"
 #include "ondevice_ai.h"
 #include "net_log.h"
+#include "backend_ws.h"
 
 using namespace websockets;
 
@@ -17,7 +18,7 @@ static WebsocketsClient ai_ws_client;
 
 static const uint32_t AI_WS_RECONNECT_INTERVAL_MS = 3000;
 
-static const size_t PACKET_SIZE = 4 + SAMPLE_RATE * sizeof(int16_t); // [1바이트 방향][1바이트 온디바이스 판정][2바이트 패딩][PCM int16 데이터]
+static const size_t PACKET_SIZE = 4 + SAMPLE_RATE * sizeof(int16_t); // [1바이트 방향][1바이트 로컬 진동 여부][2바이트 패딩][PCM int16 데이터]
 
 // core 1이 채워서 core 0로 넘길 이중 버퍼. busy 중엔 재사용 안 함.
 // core 1은 매 사이클 ai_ws_get_pcm_buf()로 빈 슬롯을 얻어 PCM을 직접 써넣는다(중간 스크래치 버퍼 없음).
@@ -70,7 +71,7 @@ static void ai_ws_task(void* param) {
 }
 
 #if ONDEVICE_AI_ENABLED
-// core 0 전용 태스크: 온디바이스 AI로 먼저 판정하고 결과 플래그를 패킷에 넣어 ai_ws_task로 넘김.
+// core 0 전용 태스크: 온디바이스 AI로 먼저 판정하고 진동 여부를 패킷에 넣어 ai_ws_task로 넘김.
 // 전송 태스크와 분리해 추론 중에도 웹소켓 poll/재연결이 멈추지 않게 함.
 static void ondevice_task(void* param) {
     // 모델 로딩은 스택 여유가 있는 이 태스크에서 함. 실패해도 패킷은 계속 전달(온디바이스만 꺼진 상태).
@@ -86,25 +87,29 @@ static void ondevice_task(void* param) {
         xQueueReceive(infer_queue, &pkt, portMAX_DELAY);
 
         uint8_t* buf = net_bufs[pkt.idx];
-        uint8_t judged = 0;  // 패킷 [1]번 바이트: 1이면 온디바이스가 긴급으로 판정
+        bool vibrated = false;  // 패킷[1]: 실제로 진동했으면 1
 
-        // 버튼 꺼짐/방해금지 중엔 추론 자체를 스킵.
-        if (ready && settings_emergency_alert_enabled() && !settings_do_not_disturb()) {
+        // 백엔드 미연결 시 버튼 무관하게 실행, 방해금지는 우선
+        bool should_run = !backend_ws_connected() || settings_emergency_alert_enabled();
+        if (ready && should_run && !settings_do_not_disturb()) {
             Direction dir = (Direction)buf[0];
             uint32_t feature_us = 0, infer_us = 0;
             float prob = ondevice_ai_infer((const int16_t*)(buf + 4), &feature_us, &infer_us);
 
             if (prob >= 0.0f) {
-                judged = (prob >= ONDEVICE_AI_THRESHOLD) ? 1 : 0;
+                bool judged = prob >= ONDEVICE_AI_THRESHOLD;
                 Serial.printf("[온디바이스AI] 긴급확률=%.3f (%s) 방향=%s | 특징 %u us, 추론 %u us\n",
                               prob, judged ? "긴급" : "일반", direction_to_str(dir),
                               (unsigned)feature_us, (unsigned)infer_us);
                 if (judged) {
-                    motor_vibrate(dir, settings_haptic_strength());
+                    vibrated = motor_vibrate(dir, settings_haptic_strength(), true);
+                    if (!vibrated) {
+                        Serial.println("[온디바이스AI] 긴급 판정이지만 방향/쿨다운으로 진동 안 함");
+                    }
                 }
             }
         }
-        buf[1] = judged;
+        buf[1] = vibrated ? 1 : 0;
 
         // 미연결이면 버퍼 바로 반납 (접속 시도 블로킹에 버퍼가 묶여 추론이 멈추는 것 방지)
         if (!ai_ws_connected) {

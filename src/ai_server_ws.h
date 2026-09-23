@@ -3,7 +3,7 @@
 #include "direction.h"
 #include "config.h"
 
-// setup()에서 1회 호출. WiFi/AI서버 웹소켓 연결을 Core 0 태스크로 분리해 Core 1 오디오 캡처와 독립적으로 처리.
+// setup()에서 1회 호출. AI서버 전송·온디바이스 추론 태스크를 Core 0에서 시작.
 void      ai_ws_start();
 // 전송용 빈 슬롯이 없으면 nullptr 반환 — 이때는 audio_flatten/ai_ws_send를 호출하지 말 것.
 int16_t*  ai_ws_get_pcm_buf();
