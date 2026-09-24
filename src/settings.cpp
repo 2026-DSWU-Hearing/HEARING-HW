@@ -3,7 +3,7 @@
 // 백엔드 설정 수신 전 기본값
 static volatile bool    s_emergency_alert_enabled = true;
 static volatile bool    s_do_not_disturb          = false;
-static volatile uint8_t s_haptic_strength         = 70;  // 오프라인 기본 세기
+static volatile uint8_t s_haptic_strength         = 50;  // 오프라인 기본 세기
 
 bool    settings_emergency_alert_enabled() { return s_emergency_alert_enabled; }
 bool    settings_do_not_disturb()          { return s_do_not_disturb; }
