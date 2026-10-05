@@ -89,6 +89,10 @@ bool motor_vibrate(Direction dir, uint8_t strength, bool from_ondevice) {
     }
 }
 
+bool motor_is_active() {
+    return vibrate_until_ms != 0;
+}
+
 // loop()에서 폴링: 진동 시작 후 VIBRATE_DURATION_MS가 지나면 자동으로 정지 (한 번 탭 형태)
 void motor_update() {
     if (vibrate_until_ms == 0) return;

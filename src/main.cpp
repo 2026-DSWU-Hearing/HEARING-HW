@@ -27,15 +27,16 @@ void setup() {
     */
 
     audio_init();
+    battery_init();
     ai_ws_start();
     motor_init();
-    battery_init();
     led_init();
     backend_ws_start();
 }
 
 void loop() {
     motor_update();
+    battery_update();
     led_periodic_update();
     detector_process();
 }

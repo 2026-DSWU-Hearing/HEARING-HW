@@ -62,8 +62,12 @@ constexpr uint32_t VIBRATE_COOLDOWN_MS = 3000; // 온디바이스 진동 쿨다�
 constexpr float    BATTERY_DIVIDER_RATIO      = 2.0f;  // 100K/100K -> GPIO2 전압의 2배가 배터리 전압
 constexpr float    BATTERY_FULL_VOLTAGE       = 4.2f;  // 100%
 constexpr float    BATTERY_EMPTY_VOLTAGE      = 3.3f;  // 0% (TP4056 보호회로 컷오프보다 여유 있게)
-constexpr uint8_t  BATTERY_LOW_THRESHOLD_PCT  = 20;    // 이 미만이면 LED 빨강
+constexpr uint8_t  BATTERY_LOW_THRESHOLD_PCT  = 20;    // 이 이하이면 LED 빨강
 constexpr uint32_t BATTERY_CHECK_INTERVAL_MS  = 5000;
+constexpr int      BATTERY_ADC_SAMPLES        = 32;    // 측정 1회당 평균 낼 횟수
+constexpr float    BATTERY_SMOOTHING_DOWN     = 0.05f; // 내려갈 때 반영 비율
+constexpr float    BATTERY_SMOOTHING_UP       = 0.3f;  // 올라갈 때 반영 비율
+constexpr uint8_t  BATTERY_CHARGE_JUMP_PCT    = 5;     // 이만큼 오르면 충전으로 판단
 
 constexpr float MOTOR_RATED_VOLTAGE = 3.0f; // 코인형 진동모터 정격전압
 constexpr float MOTOR_MIN_VALID_BATTERY_V = 2.0f; // 이 미만이면 ADC 오류(미배선/헐거움)로 보고 전압보정 포기
