@@ -48,8 +48,8 @@ static void on_message(WebsocketsMessage msg) {
         // 빠진 필드는 현재값 유지
         bool emergency = doc["emergency_alert_enabled"] | settings_emergency_alert_enabled();
         bool dnd       = doc["do_not_disturb"] | settings_do_not_disturb();
-        int  strength  = doc["haptic_strength"] | (int)settings_haptic_strength();
-        settings_set(emergency, dnd, (uint8_t)constrain(strength, 0, 100));
+        int  strength  = constrain(doc["haptic_strength"] | (int)settings_haptic_strength(), 0, 100);
+        settings_set(emergency, dnd, (uint8_t)strength);
         Serial.printf("settings_update 수신: emergency=%d dnd=%d strength=%d\n", emergency, dnd, strength);
     }
 }

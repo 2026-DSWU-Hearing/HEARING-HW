@@ -12,5 +12,5 @@ uint8_t settings_haptic_strength()         { return s_haptic_strength; }
 void settings_set(bool emergency_alert_enabled, bool do_not_disturb, uint8_t haptic_strength) {
     s_emergency_alert_enabled = emergency_alert_enabled;
     s_do_not_disturb          = do_not_disturb;
-    s_haptic_strength         = haptic_strength > 100 ? 100 : haptic_strength;
+    s_haptic_strength         = haptic_strength;
 }
