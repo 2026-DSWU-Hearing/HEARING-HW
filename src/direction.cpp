@@ -11,6 +11,7 @@ constexpr float RAD2DEG = 57.29578f;
 static Direction vote_buf[VOTE_BUF_SIZE];
 static int       vote_idx    = 0;
 static Direction held_dir    = Direction::UNKNOWN; // 이번 소리에서 마지막으로 정한 방향
+static Direction pending_dir = Direction::UNKNOWN; // 좌우 뒤집힘 대기 중인 방향
 static float     prev_energy = 0.0f;
 
 // GCC-PHAT 작업 버퍼 (core 1 전용)
@@ -32,6 +33,7 @@ static void clear_votes() {
 void direction_reset() {
     clear_votes();
     held_dir    = Direction::UNKNOWN;
+    pending_dir = Direction::UNKNOWN;
     prev_energy = 0.0f;
 }
 
@@ -97,12 +99,6 @@ static float peak(const float* corr) {
 }
 
 static Direction decide(float lr, float lb, float rb, const char** why) {
-    // 뒤 쌍 둘 다 뒤 마이크에 먼저 도착했으면 뒤 (검산과 무관)
-    if (!isnan(lb) && !isnan(rb) && lb <= -BACK_LAG_MIN && rb <= -BACK_LAG_MIN) {
-        *why = "뒤쌍";
-        return Direction::BACK;
-    }
-
     bool lr_ok = !isnan(lr);
     bool full  = lr_ok && !isnan(lb) && !isnan(rb) && fabsf(lb - (lr + rb)) <= CLOSURE_TOL;
 
@@ -117,10 +113,20 @@ static Direction decide(float lr, float lb, float rb, const char** why) {
         return ang > 0 ? Direction::RIGHT : Direction::LEFT;
     }
 
-    // 검산 실패: 뒤 쌍은 안 믿고 좌우만 판정
+    // 검산 실패: 뒤 쌍 둘 다 뒤 마이크에 먼저 도착했으면 뒤
+    if (!isnan(lb) && !isnan(rb) && lb <= -BACK_LAG_MIN && rb <= -BACK_LAG_MIN) {
+        *why = "뒤쌍";
+        return Direction::BACK;
+    }
+
+    // 그 외에는 좌우만 판정. 너무 크면 lb-rb(원래 lr과 같아야 함)도 같은 방향일 때만
     if (lr_ok && fabsf(lr) >= LR_ONLY_MIN) {
-        *why = "좌우만";
-        return lr > 0 ? Direction::RIGHT : Direction::LEFT;
+        float d = lb - rb;
+        bool big_ok = !isnan(d) && (lr > 0 ? d >= LR_PAIR_MIN : d <= -LR_PAIR_MIN);
+        if (fabsf(lr) <= LR_ONLY_MAX || big_ok) {
+            *why = "좌우만";
+            return lr > 0 ? Direction::RIGHT : Direction::LEFT;
+        }
     }
     *why = "무효";
     return Direction::UNKNOWN;
@@ -171,8 +177,19 @@ Direction direction_get() {
     for (int d = 0; d < 4; d++) {
         if (count[d] > best_count) { best_count = count[d]; best = d; }
     }
-    if (best >= 0) held_dir = (Direction)best;
-    return held_dir; // 이번 구간에 표가 없으면 직전 방향 유지
+    if (best < 0) return held_dir; // 이번 구간에 표가 없으면 직전 방향 유지
+
+    // 같은 소리에서 좌우가 뒤집히면 두 구간 연속일 때만 바꿈
+    Direction d = (Direction)best;
+    bool flip = (held_dir == Direction::LEFT && d == Direction::RIGHT) ||
+                (held_dir == Direction::RIGHT && d == Direction::LEFT);
+    if (flip && pending_dir != d) {
+        pending_dir = d;
+        return held_dir;
+    }
+    pending_dir = Direction::UNKNOWN;
+    held_dir    = d;
+    return held_dir;
 }
 
 const char* direction_to_str(Direction d) {

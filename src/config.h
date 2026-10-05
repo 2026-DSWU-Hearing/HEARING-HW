@@ -44,16 +44,20 @@ constexpr int SILENCE_COUNT_MAX      = 1;
 constexpr int   MAX_TDOA_SAMPLES = 16;
 constexpr int   VOTE_BUF_SIZE    = SAMPLE_RATE / BLOCK_SIZE + 1;
 
-// 방향 판정 (GCC-PHAT)
-constexpr float ONSET_RATIO          = 1.5f;  // 직전 블록보다 이만큼 커진 블록만 계산(울림 제외)
-constexpr float CLOSURE_TOL          = 2.0f;  // 세 쌍 검산 허용 오차(샘플)
-constexpr float LR_MAX_LAG           = 8.0f;  // 왼-오 최대 시간차(17cm)
-constexpr float FB_MAX_LAG           = 11.7f; // 앞-뒤 최대 시간차(25cm)
-constexpr float MIN_DIR_MAG          = 0.2f;  // 이보다 약하면 판정 안 함
-constexpr float LR_ONLY_MIN          = 2.0f;  // 검산 실패 시 왼-오 값만으로 좌우 판정할 최소 시간차
-constexpr float BACK_LAG_MIN         = 3.0f;  // 뒤 쌍 둘 다 이만큼 음수면(뒤 마이크에 먼저 도착) 뒤
+// 방향 판정 (GCC-PHAT, 시간차 단위: 샘플)
+constexpr float ONSET_RATIO          = 1.5f;  // 직전 블록 대비 증가율(울림 제외)
+constexpr float CLOSURE_TOL          = 2.0f;  // 세 쌍 검산 허용 오차
+constexpr float LR_MAX_LAG           = 8.0f;  // 왼-오 17cm
+constexpr float FB_MAX_LAG           = 11.7f; // 앞-뒤 25cm
+constexpr float MIN_DIR_MAG          = 0.2f;  // 각도 판정 최소 크기
 constexpr float FRONT_HALF_ANGLE_DEG = 30.0f;
 constexpr float BACK_HALF_ANGLE_DEG  = 60.0f;
+
+// 검산 실패 시 보조 판정
+constexpr float LR_ONLY_MIN          = 2.0f;
+constexpr float LR_ONLY_MAX          = 10.0f; // 초과 시 lb-rb로 재확인
+constexpr float LR_PAIR_MIN          = 3.0f;
+constexpr float BACK_LAG_MIN         = 2.0f;  // 뒤 판정 기준(lb, rb 모두 음수)
 
 constexpr uint32_t AUDIO_MUTE_AFTER_VIBRATE_MS = 1000; // 모터 진동 시작부터 노이즈 방지용 무음 구간
 constexpr uint32_t VIBRATE_DURATION_MS = 500; // 진동 지속시간 0.5초
@@ -69,15 +73,15 @@ constexpr uint32_t VIBRATE_COOLDOWN_MS = 3000; // 온디바이스 진동 쿨다�
 #define NET_LOG_ENABLED 0
 #endif
 
-constexpr float    BATTERY_DIVIDER_RATIO      = 2.0f;  // 100K/100K -> GPIO2 전압의 2배가 배터리 전압
+constexpr float    BATTERY_DIVIDER_RATIO      = 2.0f;  // 100K/100K 분배
 constexpr float    BATTERY_FULL_VOLTAGE       = 4.2f;  // 100%
-constexpr float    BATTERY_EMPTY_VOLTAGE      = 3.3f;  // 0% (TP4056 보호회로 컷오프보다 여유 있게)
-constexpr uint8_t  BATTERY_LOW_THRESHOLD_PCT  = 20;    // 이 이하이면 LED 빨강
+constexpr float    BATTERY_EMPTY_VOLTAGE      = 3.3f;  // 0%(보호회로 컷오프보다 여유)
+constexpr uint8_t  BATTERY_LOW_THRESHOLD_PCT  = 20;    // LED 빨강 기준(이하)
 constexpr uint32_t BATTERY_CHECK_INTERVAL_MS  = 5000;
-constexpr int      BATTERY_ADC_SAMPLES        = 32;    // 측정 1회당 평균 낼 횟수
-constexpr float    BATTERY_SMOOTHING_DOWN     = 0.05f; // 내려갈 때 반영 비율
-constexpr float    BATTERY_SMOOTHING_UP       = 0.3f;  // 올라갈 때 반영 비율
-constexpr uint8_t  BATTERY_CHARGE_JUMP_PCT    = 5;     // 이만큼 오르면 충전으로 판단
+constexpr int      BATTERY_ADC_SAMPLES        = 32;    // 1회 측정 평균 횟수
+constexpr float    BATTERY_SMOOTHING_DOWN     = 0.05f; // 하강 반영 비율
+constexpr float    BATTERY_SMOOTHING_UP       = 0.3f;  // 상승 반영 비율
+constexpr uint8_t  BATTERY_CHARGE_JUMP_PCT    = 5;     // 충전 판단 상승폭
 
-constexpr float MOTOR_RATED_VOLTAGE = 3.0f; // 코인형 진동모터 정격전압
-constexpr float MOTOR_MIN_VALID_BATTERY_V = 2.0f; // 이 미만이면 ADC 오류(미배선/헐거움)로 보고 전압보정 포기
+constexpr float MOTOR_RATED_VOLTAGE = 3.0f;       // 코인형 진동모터 정격전압
+constexpr float MOTOR_MIN_VALID_BATTERY_V = 2.0f; // 전압 보정 하한(미만은 ADC 오류로 봄)
