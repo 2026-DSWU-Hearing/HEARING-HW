@@ -10,7 +10,7 @@ void led_init() {
 }
 
 void led_update(uint8_t percent) {
-    bool low = percent < BATTERY_LOW_THRESHOLD_PCT;
+    bool low = percent <= BATTERY_LOW_THRESHOLD_PCT;
     digitalWrite(LED_GREEN_PIN, low ? LOW : HIGH);
     digitalWrite(LED_RED_PIN,   low ? HIGH : LOW);
 }
