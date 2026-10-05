@@ -4,6 +4,7 @@
 #include "audio.h"
 #include "direction.h"
 #include "ai_server_ws.h"
+#include "net_log.h"
 
 enum class State { IDLE, GATHERING, STREAMING };
 

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <Arduino.h>
+#include "net_log.h"
 
 static Direction vote_buf[VOTE_BUF_SIZE];
 static int       vote_idx = 0;

@@ -18,4 +18,7 @@ static const char* backend_ws_host = "your_backend_ip";
 static const uint16_t backend_ws_port = 8000;
 static const char* backend_device_token = "your_device_token";
 
+// WiFi 로그(net_log, 텔넷 23번) 접속 암호. NET_LOG_ENABLED=1일 때만 사용.
+static const char* net_log_password = "your_net_log_password";
+
 #endif
