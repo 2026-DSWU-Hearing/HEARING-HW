@@ -54,6 +54,7 @@ static void ai_ws_task(void* param) {
     AudioPacket pkt;
 
     for (;;) {
+        if (!ai_ws_client.available()) ai_ws_connected = false;
         bool connected = wifi_ensure_connected() &&
             ws_ensure_connected(ai_ws_client, build_ws_url, "AI서버", AI_WS_RECONNECT_INTERVAL_MS, last_ws_reconnect_ms);
         if (connected) {
