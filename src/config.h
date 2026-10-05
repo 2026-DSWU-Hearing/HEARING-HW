@@ -42,8 +42,18 @@ constexpr int SILENCE_THRESHOLD      = 20;
 constexpr int SILENCE_COUNT_MAX      = 1;
 
 constexpr int   MAX_TDOA_SAMPLES = 16;
-constexpr float TDOA_THRESHOLD   = 1.5f;
 constexpr int   VOTE_BUF_SIZE    = SAMPLE_RATE / BLOCK_SIZE + 1;
+
+// 방향 판정 (GCC-PHAT)
+constexpr float ONSET_RATIO          = 1.5f;  // 직전 블록보다 이만큼 커진 블록만 계산(울림 제외)
+constexpr float CLOSURE_TOL          = 2.0f;  // 세 쌍 검산 허용 오차(샘플)
+constexpr float LR_MAX_LAG           = 8.0f;  // 왼-오 최대 시간차(17cm)
+constexpr float FB_MAX_LAG           = 11.7f; // 앞-뒤 최대 시간차(25cm)
+constexpr float MIN_DIR_MAG          = 0.2f;  // 이보다 약하면 판정 안 함
+constexpr float LR_ONLY_MIN          = 2.0f;  // 검산 실패 시 왼-오 값만으로 좌우 판정할 최소 시간차
+constexpr float BACK_LAG_MIN         = 3.0f;  // 뒤 쌍 둘 다 이만큼 음수면(뒤 마이크에 먼저 도착) 뒤
+constexpr float FRONT_HALF_ANGLE_DEG = 30.0f;
+constexpr float BACK_HALF_ANGLE_DEG  = 60.0f;
 
 constexpr uint32_t AUDIO_MUTE_AFTER_VIBRATE_MS = 1000; // 모터 진동 시작부터 노이즈 방지용 무음 구간
 constexpr uint32_t VIBRATE_DURATION_MS = 500; // 진동 지속시간 0.5초
