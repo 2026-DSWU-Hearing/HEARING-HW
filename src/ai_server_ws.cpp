@@ -20,11 +20,12 @@ static const uint32_t AI_WS_RECONNECT_INTERVAL_MS = 3000;
 
 static const size_t PACKET_SIZE = 4 + SAMPLE_RATE * sizeof(int16_t); // [1바이트 방향][1바이트 로컬 진동 여부][2바이트 패딩][PCM int16 데이터]
 
-// core 1이 채워서 core 0로 넘길 이중 버퍼. busy 중엔 재사용 안 함.
+// core 1이 채워서 core 0로 넘길 버퍼 슬롯(판정 1 + 전송 1 + 여유 1). busy 중엔 재사용 안 함.
 // core 1은 매 사이클 ai_ws_get_pcm_buf()로 빈 슬롯을 얻어 PCM을 직접 써넣는다(중간 스크래치 버퍼 없음).
 // PSRAM에 할당(ai_ws_start에서) — 오디오 전송은 0.5초에 한 번뿐이라 PSRAM 지연이 문제되지 않음.
-static uint8_t* net_bufs[2] = { nullptr, nullptr };
-static volatile bool net_buf_busy[2] = { false, false };
+static const int NET_BUF_COUNT = 3;
+static uint8_t* net_bufs[NET_BUF_COUNT] = {};
+static volatile bool net_buf_busy[NET_BUF_COUNT] = {};
 
 // ai_ws_get_pcm_buf()가 고른, 아직 ai_ws_send()로 커밋되지 않은 슬롯. -1이면 없음.
 // net_buf_busy는 ai_ws_send()만 true로 바꾼다(get_pcm_buf는 읽기만 함) — 호출 짝이 깨져도 슬롯이 영구 busy로 안 남게.
@@ -131,16 +132,16 @@ static void ondevice_task(void* param) {
 #endif
 
 void ai_ws_start() {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < NET_BUF_COUNT; i++) {
         net_bufs[i] = (uint8_t*)heap_caps_malloc(PACKET_SIZE, MALLOC_CAP_SPIRAM);
         if (net_bufs[i] == nullptr) {
             Serial.println("PSRAM 전송 버퍼 할당 실패");
         }
     }
     WiFi.begin(ssid, password);
-    audio_queue = xQueueCreate(2, sizeof(AudioPacket));
+    audio_queue = xQueueCreate(NET_BUF_COUNT, sizeof(AudioPacket));
 #if ONDEVICE_AI_ENABLED
-    infer_queue = xQueueCreate(2, sizeof(AudioPacket));
+    infer_queue = xQueueCreate(NET_BUF_COUNT, sizeof(AudioPacket));
     xTaskCreatePinnedToCore(ondevice_task, "ondevice_ai", 16384, NULL, 1, NULL, 0);
 #endif
     xTaskCreatePinnedToCore(ai_ws_task, "ai_ws", 8192, NULL, 1, NULL, 0);
@@ -148,10 +149,11 @@ void ai_ws_start() {
 
 // core 1에서 호출. 빈 슬롯이 없으면 nullptr 반환 — 이때 호출부는 audio_flatten/ai_ws_send를 건너뛰어야 함.
 int16_t* ai_ws_get_pcm_buf() {
-    if (net_bufs[0] != nullptr && !net_buf_busy[0])      pending_idx = 0;
-    else if (net_bufs[1] != nullptr && !net_buf_busy[1]) pending_idx = 1;
-    else {
-        pending_idx = -1;
+    pending_idx = -1;
+    for (int i = 0; i < NET_BUF_COUNT; i++) {
+        if (net_bufs[i] != nullptr && !net_buf_busy[i]) { pending_idx = i; break; }
+    }
+    if (pending_idx < 0) {
         Serial.println("AI서버 전송 버퍼 가득 참, 오디오 블록 드롭");
         return nullptr;
     }
