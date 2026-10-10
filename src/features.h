@@ -9,3 +9,6 @@ constexpr int FEAT_MELS    = 40;     // 출력 mel 밴드 수
 // pcm: int16 x 16000 / out: float x (98 * 40), 행 우선 [프레임 * 40 + mel]
 // 내부 작업 버퍼가 정적이라 한 태스크에서만 호출할 것.
 void features_compute(const int16_t* pcm, float* out);
+
+// 제자리 512점 FFT. 버퍼는 호출하는 쪽 것을 쓰므로 여러 태스크에서 호출 가능.
+void fft512(float* re, float* im);

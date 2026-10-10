@@ -47,7 +47,7 @@ void detector_process() {
 
     Direction dir = direction_get();
     Serial.printf("방향: %s\n", direction_to_str(dir));
-    direction_reset();
+    direction_next_window();
 
     int16_t* pcm_buf = ai_ws_get_pcm_buf();
     if (pcm_buf != nullptr) {
