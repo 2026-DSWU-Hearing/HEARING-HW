@@ -41,11 +41,12 @@ static QueueHandle_t infer_queue;  // 추론 대기열: ondevice_task가 꺼내�
 #endif
 
 static String build_ws_url() {
-    return String("ws://") + websockets_server_host + ":" + websockets_server_port + "/ws/neckband";
+    return String(ai_server_ws_url);
 }
 
 // core 0 전용 태스크: WiFi/웹소켓 재연결 + 오디오 전송. core 1 오디오 캡처와 완전히 분리.
 static void ai_ws_task(void* param) {
+    ws_setup_tls(ai_ws_client, ai_server_ws_url);
     ai_ws_client.onMessage([](WebsocketsMessage msg) {
         Serial.println(msg.data());
     });
