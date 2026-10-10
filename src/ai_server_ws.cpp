@@ -26,6 +26,9 @@ static const size_t PACKET_SIZE = 4 + SAMPLE_RATE * sizeof(int16_t); // [1바이
 static const int NET_BUF_COUNT = 3;
 static uint8_t* net_bufs[NET_BUF_COUNT] = {};
 static volatile bool net_buf_busy[NET_BUF_COUNT] = {};
+#if DEBUG_METRICS_ENABLED
+static volatile uint32_t net_buf_start_ms[NET_BUF_COUNT] = {};  // 슬롯 채운 시각
+#endif
 
 // ai_ws_get_pcm_buf()가 고른, 아직 ai_ws_send()로 커밋되지 않은 슬롯. -1이면 없음.
 // net_buf_busy는 ai_ws_send()만 true로 바꾼다(get_pcm_buf는 읽기만 함) — 호출 짝이 깨져도 슬롯이 영구 busy로 안 남게.
@@ -66,7 +69,16 @@ static void ai_ws_task(void* param) {
 
         if (xQueueReceive(audio_queue, &pkt, pdMS_TO_TICKS(10)) == pdTRUE) {
             if (ai_ws_client.available()) {
+#if DEBUG_METRICS_ENABLED
+                uint32_t t0 = millis();
+#endif
                 ai_ws_client.sendBinary((const char*)net_bufs[pkt.idx], pkt.len);
+#if DEBUG_METRICS_ENABLED
+                uint32_t t1 = millis();
+                Serial.printf("[전송측정] 대기+판정 %u ms, 전송 %u ms, 합계 %u ms\n",
+                              (unsigned)(t0 - net_buf_start_ms[pkt.idx]), (unsigned)(t1 - t0),
+                              (unsigned)(t1 - net_buf_start_ms[pkt.idx]));
+#endif
             }
             net_buf_busy[pkt.idx] = false;
         }
@@ -172,6 +184,9 @@ void ai_ws_send(Direction dir, int num_samples) {
     net_bufs[idx][3] = 0;
 
     net_buf_busy[idx] = true;
+#if DEBUG_METRICS_ENABLED
+    net_buf_start_ms[idx] = millis();
+#endif
     size_t len = 4 + num_samples * sizeof(int16_t);
 
     AudioPacket pkt{ (uint8_t)idx, len };

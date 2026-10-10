@@ -9,6 +9,10 @@
 #include "detector.h"
 #include "net_log.h"
 #include "net_reconnect.h"
+#include "config.h"
+#if DEBUG_METRICS_ENABLED
+#include <esp_heap_caps.h>
+#endif
 
 void setup() {
     Serial.begin(115200);
@@ -36,7 +40,25 @@ void setup() {
     backend_ws_start();
 }
 
+#if DEBUG_METRICS_ENABLED
+// 내부 RAM 여유 확인(10초마다)
+static void heap_log_update() {
+    static uint32_t last_ms = 0;
+    uint32_t now = millis();
+    if (now - last_ms < 10000) return;
+    last_ms = now;
+    Serial.printf("[heap] 내부 %u (최저 %u, 최대블록 %u) / PSRAM %u\n",
+                  (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+                  (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL),
+                  (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
+                  (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+}
+#endif
+
 void loop() {
+#if DEBUG_METRICS_ENABLED
+    heap_log_update();
+#endif
     motor_update();
     battery_update();
     led_periodic_update();

@@ -73,6 +73,11 @@ constexpr uint32_t VIBRATE_COOLDOWN_MS = 3000; // 온디바이스 진동 쿨다�
 #define NET_LOG_ENABLED 0
 #endif
 
+// 측정 로그([heap], [전송측정]). netlog 환경에서 켜짐
+#ifndef DEBUG_METRICS_ENABLED
+#define DEBUG_METRICS_ENABLED 0
+#endif
+
 constexpr float    BATTERY_DIVIDER_RATIO      = 2.0f;  // 100K/100K 분배
 constexpr float    BATTERY_FULL_VOLTAGE       = 4.2f;  // 100%
 constexpr float    BATTERY_EMPTY_VOLTAGE      = 3.3f;  // 0%(보호회로 컷오프보다 여유)
