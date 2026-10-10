@@ -1,6 +1,8 @@
 #include "net_reconnect.h"
 #include <WiFi.h>
 #include <time.h>
+#include <esp_heap_caps.h>
+#include <mbedtls/platform.h>
 #include "ca_cert.h"
 #include "net_log.h"
 
@@ -38,6 +40,21 @@ bool wifi_ensure_connected() {
         WiFi.reconnect();
     }
     return false;
+}
+
+static const size_t TLS_PSRAM_MIN_BYTES = 1024;  // 이상만 PSRAM(작은 할당은 내부 RAM 유지)
+
+static void* tls_calloc(size_t n, size_t size) {
+    size_t total = n * size;
+    if (total >= TLS_PSRAM_MIN_BYTES) {
+        void* p = heap_caps_calloc(n, size, MALLOC_CAP_SPIRAM);
+        if (p) return p;
+    }
+    return heap_caps_calloc(n, size, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+}
+
+void tls_alloc_use_psram() {
+    mbedtls_platform_set_calloc_free(tls_calloc, heap_caps_free);
 }
 
 void ws_setup_tls(websockets::WebsocketsClient& client, const char* url) {

@@ -6,6 +6,9 @@
 // 처음 연결되면 NTP 시간 동기화를 시작함(wss 인증서 검증에 필요).
 bool wifi_ensure_connected();
 
+// TLS 큰 버퍼를 PSRAM에 할당(내부 RAM 부족 방지). 웹소켓 태스크 시작 전 1회 호출.
+void tls_alloc_use_psram();
+
 // url이 wss://면 Let's Encrypt 루트 CA를 등록. 태스크 시작 시 1회 호출.
 void ws_setup_tls(websockets::WebsocketsClient& client, const char* url);
 

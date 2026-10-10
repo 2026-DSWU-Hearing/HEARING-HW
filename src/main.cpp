@@ -8,6 +8,7 @@
 #include "led.h"
 #include "detector.h"
 #include "net_log.h"
+#include "net_reconnect.h"
 
 void setup() {
     Serial.begin(115200);
@@ -28,6 +29,7 @@ void setup() {
 
     audio_init();
     battery_init();
+    tls_alloc_use_psram();
     ai_ws_start();
     motor_init();
     led_init();
