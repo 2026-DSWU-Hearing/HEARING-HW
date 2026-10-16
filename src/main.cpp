@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <esp_task_wdt.h>
 #include "audio.h"
 #include "ai_server_ws.h"
 #include "backend_ws.h"
@@ -30,6 +31,10 @@ void setup() {
         }
     }
     */
+
+    // core 0 유휴 감시 해제: 시끄러울 때 TLS 핸드셰이크+추론이 겹치면 5초 넘게 꽉 차서 감시가 재부팅을 걸기 때문
+    esp_task_wdt_config_t wdt_cfg = { CONFIG_ESP_TASK_WDT_TIMEOUT_S * 1000, 0, true };
+    esp_task_wdt_reconfigure(&wdt_cfg);
 
     audio_init();
     battery_init();
