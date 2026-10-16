@@ -104,9 +104,10 @@ static void ondevice_task(void* param) {
         uint8_t* buf = net_bufs[pkt.idx];
         bool vibrated = false;  // 패킷[1]: 실제로 진동했으면 1
 
-        // 백엔드 미연결 시 버튼 무관하게 실행, 방해금지는 우선
-        bool should_run = !backend_ws_connected() || settings_emergency_alert_enabled();
-        if (ready && should_run && !settings_do_not_disturb()) {
+        // 백엔드 미연결 시 설정 무관하게 실행, 연결 중엔 방해금지 우선
+        bool should_run = !backend_ws_connected() ||
+                          (!settings_do_not_disturb() && settings_emergency_alert_enabled());
+        if (ready && should_run) {
             Direction dir = (Direction)buf[0];
             uint32_t feature_us = 0, infer_us = 0;
             float prob = ondevice_ai_infer((const int16_t*)(buf + 4), &feature_us, &infer_us);
