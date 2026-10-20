@@ -55,9 +55,7 @@ static void on_message(WebsocketsMessage msg) {
 }
 
 static String build_backend_url() {
-    return String("ws://") + backend_ws_host + ":" + backend_ws_port +
-                 "/ws/devices?token=" + backend_device_token +
-                 "&mac=" + WiFi.macAddress();
+    return String(backend_ws_url) + "?token=" + backend_device_token + "&mac=" + WiFi.macAddress();
 }
 
 static void send_status() {
@@ -71,6 +69,7 @@ static void send_status() {
 }
 
 static void backend_task(void* param) {
+    ws_setup_tls(backend_ws_client, backend_ws_url);
     backend_ws_client.onMessage(on_message);
 
     uint32_t last_reconnect_attempt_ms = 0;

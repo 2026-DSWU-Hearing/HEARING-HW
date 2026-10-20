@@ -9,13 +9,11 @@
 static const char* ssid = "your_ssid";
 static const char* password = "your_password";
 
-// AI서버 /ws/neckband 접속용
-static const char* websockets_server_host = "your_server_ip";
-static const uint16_t websockets_server_port = 8765;
+// AI서버 오디오 전송 주소. wss://면 TLS(ca_cert.h) 사용, 로컬 테스트는 "ws://<PC IP>:8765/ws/neckband"
+static const char* ai_server_ws_url = "wss://your_server_domain/ws/neckband";
 
-// 백엔드 /ws/devices 접속용
-static const char* backend_ws_host = "your_backend_ip";
-static const uint16_t backend_ws_port = 8000;
+// 백엔드 기기 채널 주소(?token=&mac= 는 코드가 붙임). 로컬 테스트는 "ws://<PC IP>:8000/ws/devices"
+static const char* backend_ws_url = "wss://your_server_domain/ws/devices";
 static const char* backend_device_token = "your_device_token";
 
 // WiFi 로그(net_log, 텔넷 23번) 접속 암호. NET_LOG_ENABLED=1일 때만 사용.

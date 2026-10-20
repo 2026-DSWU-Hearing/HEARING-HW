@@ -36,8 +36,11 @@ void init_tables() {
   g_ready = true;
 }
 
+}  // namespace
+
 // 제자리 radix-2 FFT (512점)
 void fft512(float* re, float* im) {
+  if (!g_ready) init_tables();
   // 비트 뒤집기 순서로 재배열
   int j = 0;
   for (int i = 0; i < FFT_N - 1; i++) {
@@ -69,8 +72,6 @@ void fft512(float* re, float* im) {
     }
   }
 }
-
-}  // namespace
 
 void features_compute(const int16_t* pcm, float* out) {
   if (!g_ready) init_tables();
