@@ -19,4 +19,7 @@ static const char* backend_device_token = "your_device_token";
 // WiFi 로그(net_log, 텔넷 23번) 접속 암호. NET_LOG_ENABLED=1일 때만 사용.
 static const char* net_log_password = "your_net_log_password";
 
+// OTA 업로드 암호
+static const char* ota_password = "your_ota_password";
+
 #endif

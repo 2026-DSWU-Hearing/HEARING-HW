@@ -10,6 +10,7 @@
 #include "detector.h"
 #include "net_log.h"
 #include "net_reconnect.h"
+#include "ota.h"
 #include "config.h"
 #if DEBUG_METRICS_ENABLED
 #include <esp_heap_caps.h>
@@ -43,6 +44,7 @@ void setup() {
     motor_init();
     led_init();
     backend_ws_start();
+    ota_start();
 }
 
 #if DEBUG_METRICS_ENABLED

@@ -4,6 +4,7 @@
 .vscode/launch.json
 .vscode/ipch
 src/secrets.h
+platformio_local.ini
 PROJECT_STATUS.md
 ALGORITHM_SPEC.md
 README.md
